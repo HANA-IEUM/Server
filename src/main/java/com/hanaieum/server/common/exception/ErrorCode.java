@@ -31,6 +31,9 @@ public enum ErrorCode {
     REFRESH_TOKEN_NOT_FOUND("TOKEN_001", "리프레시 토큰을 찾을 수 없습니다", HttpStatus.NOT_FOUND),
     REFRESH_TOKEN_EXPIRED("TOKEN_002", "리프레시 토큰이 만료되었습니다", HttpStatus.UNAUTHORIZED),
 
+    // 입력값 검증 에러
+    INVALID_INPUT_VALUE("VALIDATION_001", "입력값이 올바르지 않습니다", HttpStatus.BAD_REQUEST),
+
     // 서버 에러
     INTERNAL_SERVER_ERROR("SERVER_001", "내부 서버 오류입니다", HttpStatus.INTERNAL_SERVER_ERROR);
 

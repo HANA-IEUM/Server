@@ -41,4 +41,8 @@ public class Member extends BaseEntity {
     @Column(nullable = false)
     private boolean hideGroupPrompt = false;
 
+    // 월 생활비
+    @Column(nullable = false)
+    private Integer monthlyLivingCost;
+
 }

@@ -49,6 +49,7 @@ public class AuthServiceImpl implements AuthService {
                 .name(signupRequest.getName())
                 .birthDate(signupRequest.getBirthDate())
                 .gender(signupRequest.getGender())
+                .monthlyLivingCost(signupRequest.getMonthlyLivingCost())
                 .isActive(true)
                 .hideGroupPrompt(false)
                 .build();
