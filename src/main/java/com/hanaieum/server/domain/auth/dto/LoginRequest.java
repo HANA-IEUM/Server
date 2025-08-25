@@ -17,6 +17,6 @@ public class LoginRequest {
     private String phoneNumber;
 
     @NotBlank(message = "비밀번호는 필수입니다")
-    @Size(min = 6, max = 6, message = "비밀번호는 6자리여야 합니다")
+    @Pattern(regexp = "^\\d{6}$", message = "비밀번호는 6자리 숫자여야 합니다")
     private String password;
 }

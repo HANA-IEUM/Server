@@ -39,8 +39,8 @@ public class SecurityConfig {
                                 "/api/auth/refresh",     // 토큰 갱신
                                 "/swagger-ui/**",        // Swagger UI
                                 "/v3/api-docs/**"        // OpenAPI 문서
-                        ).permitAll()              // 인증 없이 접근 가능한 URL
-                        .anyRequest().authenticated() // 그 외 모든 요청은 인증 필요
+                        ).permitAll()                      // 인증 없이 접근 가능한 URL
+                        .anyRequest().authenticated()      // 그 외 모든 요청은 인증 필요
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
