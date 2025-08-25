@@ -17,3 +17,8 @@ spring:
         format_sql: true
         jdbc:
           time_zone: Asia/Seoul
+
+jwt:
+  secret: ${JWT_SECRET}
+  access-expiration: ${JWT_ACCESS_EXPIRATION:3600000}
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
