@@ -14,13 +14,15 @@ public class TokenResponse {
     private String refreshToken;
     private String tokenType;
     private Long expiresIn;
+    private boolean hideGroupPrompt;
     
-    public static TokenResponse of(String accessToken, String refreshToken, Long expiresIn) {
+    public static TokenResponse of(String accessToken, String refreshToken, Long expiresIn, boolean hideGroupPrompt) {
         return TokenResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .tokenType("Bearer")
                 .expiresIn(expiresIn)
+                .hideGroupPrompt(hideGroupPrompt)
                 .build();
     }
 }

@@ -90,7 +90,7 @@ public class AuthServiceImpl implements AuthService {
 
         log.info("로그인 성공 - 회원 ID: {}", member.getId());
 
-        return TokenResponse.of(accessToken, refreshTokenValue, accessTokenExpiration);
+        return TokenResponse.of(accessToken, refreshTokenValue, accessTokenExpiration, member.isHideGroupPrompt());
     }
 
     @Override
@@ -122,6 +122,6 @@ public class AuthServiceImpl implements AuthService {
 
         log.info("토큰 갱신 완료 - 회원 ID: {}", refreshToken.getMember().getId());
 
-        return TokenResponse.of(newAccessToken, refreshToken.getToken(), accessTokenExpiration);
+        return TokenResponse.of(newAccessToken, refreshToken.getToken(), accessTokenExpiration, refreshToken.getMember().isHideGroupPrompt());
     }
 }
