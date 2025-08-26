@@ -34,6 +34,13 @@ public enum ErrorCode {
     // 입력값 검증 에러
     INVALID_INPUT_VALUE("VALIDATION_001", "입력값이 올바르지 않습니다", HttpStatus.BAD_REQUEST),
 
+    // 인증번호 관련 에러
+    VERIFICATION_CODE_MISMATCH("VERIFICATION_001", "인증번호가 일치하지 않습니다.", HttpStatus.BAD_REQUEST),
+    VERIFICATION_CODE_EXPIRED("VERIFICATION_002", "인증번호가 만료되었거나 존재하지 않습니다.", HttpStatus.BAD_REQUEST),
+
+    // 메시지 관련 에러
+    MESSAGE_SEND_FAILURE("MESSAGE_001", "메시지 전송에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
+
     // 서버 에러
     INTERNAL_SERVER_ERROR("SERVER_001", "내부 서버 오류입니다", HttpStatus.INTERNAL_SERVER_ERROR);
 

@@ -57,6 +57,12 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+    // solapi
+    implementation 'net.nurigo:sdk:4.3.2'
+
+    // guava
+    implementation 'com.google.guava:guava:33.2.1-jre'
 }
 
 tasks.named('test') {
