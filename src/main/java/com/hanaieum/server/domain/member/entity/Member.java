@@ -37,6 +37,9 @@ public class Member extends BaseEntity {
     @Column(name = "is_active", nullable = false)
     private boolean active = true; // 활성화 여부
 
+    @Column(name = "is_deleted", nullable = false)
+    private boolean deleted = false; // 삭제 여부 (soft delete)
+
     // 그룹 안내 문구 (다시 보지 않기)
     @Column(nullable = false)
     private boolean hideGroupPrompt = false;

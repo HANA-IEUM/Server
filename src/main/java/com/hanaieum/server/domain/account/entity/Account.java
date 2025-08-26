@@ -40,7 +40,7 @@ public class Account extends BaseEntity {
     @Column(nullable = false, length = 20)
     private AccountType accountType;
 
-    @Column(name = "is_active", nullable = false)
-    private boolean active = true;
+    @Column(name = "is_deleted", nullable = false)
+    private boolean deleted = false;
 
 }

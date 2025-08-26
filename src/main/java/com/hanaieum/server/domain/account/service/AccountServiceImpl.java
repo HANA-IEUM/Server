@@ -44,7 +44,7 @@ public class AccountServiceImpl implements AccountService {
                 .password(encodedAccountPassword)
                 .balance(balance)
                 .accountType(accountType)
-                .active(true)
+                .deleted(false)
                 .build();
                 
         Account savedAccount = accountRepository.save(account);
@@ -116,7 +116,7 @@ public class AccountServiceImpl implements AccountService {
     @Override
     @Transactional(readOnly = true)
     public MainAccountResponse getMainAccount(Member member) {
-        Account mainAccount = accountRepository.findByMemberAndAccountType(member, AccountType.MAIN)
+        Account mainAccount = accountRepository.findByMemberAndAccountTypeAndDeletedFalse(member, AccountType.MAIN)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
 
         log.info("주계좌 조회 완료 - 회원 ID: {}, 계좌번호: {}", member.getId(), mainAccount.getNumber());

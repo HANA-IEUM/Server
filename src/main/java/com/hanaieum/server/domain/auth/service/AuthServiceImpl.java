@@ -54,6 +54,7 @@ public class AuthServiceImpl implements AuthService {
                 .gender(Gender.valueOf(signupRequest.getGender()))
                 .monthlyLivingCost(signupRequest.getMonthlyLivingCost())
                 .active(true)
+                .deleted(false)
                 .hideGroupPrompt(false)
                 .mainAccountLinked(false)
                 .build();
@@ -77,8 +78,8 @@ public class AuthServiceImpl implements AuthService {
             throw new CustomException(ErrorCode.INVALID_PASSWORD);
         }
 
-        // 비활성화된 회원 체크
-        if (!member.isActive()) {
+        // 비활성화되거나 삭제된 회원 체크
+        if (!member.isActive() || member.isDeleted()) {
             throw new CustomException(ErrorCode.MEMBER_NOT_FOUND);
         }
 
