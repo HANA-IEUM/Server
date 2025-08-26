@@ -30,8 +30,8 @@ public class BucketListRequest {
     private LocalDate targetDate; // 목표기간
     
     @NotNull(message = "공개 여부는 필수 입력값입니다.")
-    private Boolean isPublic; // 공개여부
+    private Boolean publicFlag; // 공개여부
     
     @NotNull(message = "혼자/함께 여부는 필수 입력값입니다.")
-    private Boolean isTogether; // 혼자/같이 여부
+    private Boolean togetherFlag; // 혼자/같이 여부
 }

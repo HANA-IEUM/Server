@@ -37,16 +37,16 @@ public class BucketList extends BaseEntity {
     private LocalDate targetDate; // 목표기간
 
     @Column(nullable = false)
-    private boolean isPublic; // 공개여부
+    private boolean publicFlag; // 공개여부
 
     @Column(nullable = false)
-    private boolean isTogether; // 혼자/같이 여부
+    private boolean shareFlag; // 혼자/같이 여부
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
     private BucketListStatus status; // 상태
 
-    @Column(nullable = false)
-    private boolean isActive = true; // 활성화 여부
+    @Column(name="is_active", nullable = false)
+    private boolean active = true; // 활성화 여부
     
 }
