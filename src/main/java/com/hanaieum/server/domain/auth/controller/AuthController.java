@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
-@Tag(name = "인증 API", description = "회원가입, 로그인, 로그아웃 관련 API")
+@Tag(name = "Auth API", description = "회원가입, 로그인, 로그아웃 관련 API")
 public class AuthController {
 
     private final AuthService authService;

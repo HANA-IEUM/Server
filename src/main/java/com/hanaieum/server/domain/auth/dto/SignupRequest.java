@@ -17,7 +17,7 @@ import java.time.LocalDate;
 public class SignupRequest {
 
     @NotBlank(message = "전화번호는 필수입니다")
-    @Pattern(regexp = "^010\\d{8}$", message = "전화번호 형식이 올바르지 않습니다")
+    @Pattern(regexp = "^01\\d{9}$", message = "전화번호 형식이 올바르지 않습니다")
     private String phoneNumber;
 
     @NotBlank(message = "비밀번호는 필수입니다")
