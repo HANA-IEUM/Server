@@ -11,6 +11,7 @@ import java.time.LocalDate;
 @Entity
 @Table(name = "bucket_lists")
 @Getter
+@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
@@ -47,6 +48,7 @@ public class BucketList extends BaseEntity {
     private BucketListStatus status; // 상태
 
     @Column(name="is_deleted", nullable = false)
-    private boolean deleted = true; // 활성화 여부
+    @Builder.Default
+    private boolean deleted = false; // 삭제 여부
     
 }

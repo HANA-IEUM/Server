@@ -3,6 +3,7 @@ package com.hanaieum.server.domain.bucketList.controller;
 import com.hanaieum.server.common.dto.ApiResponse;
 import com.hanaieum.server.domain.bucketList.dto.BucketListRequest;
 import com.hanaieum.server.domain.bucketList.dto.BucketListResponse;
+import com.hanaieum.server.domain.bucketList.dto.BucketListUpdateRequest;
 import com.hanaieum.server.domain.bucketList.service.BucketListService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -57,14 +58,36 @@ public class BucketListController {
         return ResponseEntity.ok(ApiResponse.ok(bucketLists));
     }
 
-    @DeleteMapping
-    public ResponseEntity<ApiResponse<Void>> deleteBucketList() {
-        return null;
+    @Operation(summary = "버킷리스트 삭제", description = "지정된 버킷리스트를 삭제합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "버킷리스트 삭제 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "이미 삭제된 버킷리스트"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "접근 권한 없음"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "버킷리스트를 찾을 수 없음")
+    })
+    @DeleteMapping("/{bucketListId}")
+    public ResponseEntity<ApiResponse<Void>> deleteBucketList(@PathVariable Long bucketListId) {
+        log.info("버킷리스트 삭제 API 호출: {}", bucketListId);
+        bucketListService.deleteBucketList(bucketListId);
+        return ResponseEntity.ok(ApiResponse.ok());
     }
 
-    @PatchMapping
-    public ResponseEntity<ApiResponse<Void>> updateBucketList() {
-        return null;
+    @Operation(summary = "버킷리스트 수정", description = "버킷리스트의 제목을 수정합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "버킷리스트 수정 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청 데이터 또는 이미 삭제된 버킷리스트"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "접근 권한 없음"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "버킷리스트를 찾을 수 없음")
+    })
+    @PatchMapping("/{bucketListId}")
+    public ResponseEntity<ApiResponse<BucketListResponse>> updateBucketList(
+            @PathVariable Long bucketListId,
+            @Valid @RequestBody BucketListUpdateRequest requestDto) {
+        log.info("버킷리스트 수정 API 호출: {} - {}", bucketListId, requestDto.getTitle());
+        BucketListResponse response = bucketListService.updateBucketList(bucketListId, requestDto);
+        return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
 }

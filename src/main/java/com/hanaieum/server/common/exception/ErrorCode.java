@@ -34,6 +34,11 @@ public enum ErrorCode {
     // 계좌 관련 에러
     ACCOUNT_NOT_FOUND("ACCOUNT_001", "계좌를 찾을 수 없습니다", HttpStatus.NOT_FOUND),
 
+    // 버킷리스트 관련 에러
+    BUCKET_LIST_NOT_FOUND("BUCKET_LIST_001", "버킷리스트를 찾을 수 없습니다", HttpStatus.NOT_FOUND),
+    BUCKET_LIST_ACCESS_DENIED("BUCKET_LIST_002", "버킷리스트에 접근할 권한이 없습니다", HttpStatus.FORBIDDEN),
+    BUCKET_LIST_ALREADY_DELETED("BUCKET_LIST_003", "이미 삭제된 버킷리스트입니다", HttpStatus.BAD_REQUEST),
+
     // 입력값 검증 에러
     INVALID_INPUT_VALUE("VALIDATION_001", "입력값이 올바르지 않습니다", HttpStatus.BAD_REQUEST),
 

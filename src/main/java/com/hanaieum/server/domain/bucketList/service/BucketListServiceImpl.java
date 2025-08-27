@@ -4,6 +4,7 @@ import com.hanaieum.server.common.exception.CustomException;
 import com.hanaieum.server.common.exception.ErrorCode;
 import com.hanaieum.server.domain.bucketList.dto.BucketListRequest;
 import com.hanaieum.server.domain.bucketList.dto.BucketListResponse;
+import com.hanaieum.server.domain.bucketList.dto.BucketListUpdateRequest;
 import com.hanaieum.server.domain.bucketList.entity.BucketList;
 import com.hanaieum.server.domain.bucketList.entity.BucketListStatus;
 import com.hanaieum.server.domain.bucketList.repository.BucketListRepository;
@@ -91,18 +92,57 @@ public class BucketListServiceImpl implements BucketListService {
     }
 
     @Override
-    public BucketListResponse updateBucketList(Long bucketListId, BucketListRequest requestDto) {
-        return null;
-    }
-
-    @Override
+    @Transactional
     public void deleteBucketList(Long bucketListId) {
+        log.info("버킷리스트 삭제 요청: {}", bucketListId);
         
+        // 현재 로그인한 사용자 정보 가져오기
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        Long memberId = userDetails.getId();
+        
+        // 삭제되지 않은 버킷리스트만 조회
+        BucketList bucketList = bucketListRepository.findByIdAndDeleted(bucketListId, false)
+                .orElseThrow(() -> new CustomException(ErrorCode.BUCKET_LIST_NOT_FOUND));
+        
+        // 소유자 확인
+        if (!bucketList.getMember().getId().equals(memberId)) {
+            throw new CustomException(ErrorCode.BUCKET_LIST_ACCESS_DENIED);
+        }
+        
+        // 소프트 삭제 (deleted 플래그를 true로 변경)
+        bucketList.setDeleted(true);
+        
+        bucketListRepository.save(bucketList);
+        log.info("버킷리스트 삭제 완료: ID = {}", bucketListId);
     }
 
     @Override
-    public BucketListResponse getBucketListByUser(Long userId) {
-        return null;
+    @Transactional
+    public BucketListResponse updateBucketList(Long bucketListId, BucketListUpdateRequest requestDto) {
+        log.info("버킷리스트 수정 요청: {} - {}", bucketListId, requestDto.getTitle());
+        
+        // 현재 로그인한 사용자 정보 가져오기
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        Long memberId = userDetails.getId();
+        
+        // 삭제되지 않은 버킷리스트만 조회
+        BucketList bucketList = bucketListRepository.findByIdAndDeleted(bucketListId, false)
+                .orElseThrow(() -> new CustomException(ErrorCode.BUCKET_LIST_NOT_FOUND));
+        
+        // 소유자 확인
+        if (!bucketList.getMember().getId().equals(memberId)) {
+            throw new CustomException(ErrorCode.BUCKET_LIST_ACCESS_DENIED);
+        }
+        
+        // 제목만 수정 (현재 요구사항)
+        bucketList.setTitle(requestDto.getTitle());
+        
+        BucketList savedBucketList = bucketListRepository.save(bucketList);
+        log.info("버킷리스트 수정 완료: ID = {}", bucketListId);
+        
+        return BucketListResponse.of(savedBucketList);
     }
     
 }
