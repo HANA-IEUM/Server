@@ -8,6 +8,7 @@ import com.hanaieum.server.domain.bucketList.dto.BucketListUpdateRequest;
 import com.hanaieum.server.domain.bucketList.entity.BucketList;
 import com.hanaieum.server.domain.bucketList.entity.BucketListStatus;
 import com.hanaieum.server.domain.bucketList.repository.BucketListRepository;
+import com.hanaieum.server.domain.group.entity.Group;
 import com.hanaieum.server.domain.member.entity.Member;
 import com.hanaieum.server.domain.member.repository.MemberRepository;
 import com.hanaieum.server.security.CustomUserDetails;
@@ -143,6 +144,68 @@ public class BucketListServiceImpl implements BucketListService {
         log.info("버킷리스트 수정 완료: ID = {}", bucketListId);
         
         return BucketListResponse.of(savedBucketList);
+    }
+    
+    @Override
+    public List<BucketListResponse> getGroupMembersBucketLists() {
+        log.info("그룹원들의 공개 버킷리스트 목록 조회 요청");
+        
+        // 현재 로그인한 사용자 정보 가져오기
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        Long memberId = userDetails.getId();
+        
+        // 회원 조회
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
+        
+        // 그룹에 속해있는지 확인
+        Group group = member.getGroup();
+        if (group == null) {
+            throw new CustomException(ErrorCode.GROUP_NOT_FOUND);
+        }
+        
+        // 같은 그룹원들의 공개 버킷리스트 조회 (본인 제외)
+        List<BucketList> groupBucketLists = bucketListRepository.findByMemberGroupAndPublicOrderByCreatedAtDesc(group);
+        
+        // 본인의 버킷리스트는 제외
+        List<BucketList> otherMembersBucketLists = groupBucketLists.stream()
+                .filter(bucketList -> !bucketList.getMember().getId().equals(memberId))
+                .toList();
+        
+        log.info("그룹원들의 공개 버킷리스트 조회 완료: 총 {}개", otherMembersBucketLists.size());
+        
+        return otherMembersBucketLists.stream()
+                .map(BucketListResponse::of)
+                .toList();
+    }
+
+    @Override
+    public BucketListResponse getGroupMemberBucketList(Long bucketListId) {
+        log.info("그룹원의 특정 버킷리스트 조회 요청: {}", bucketListId);
+        
+        // 현재 로그인한 사용자 정보 가져오기
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        Long memberId = userDetails.getId();
+        
+        // 회원 조회
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
+        
+        // 그룹에 속해있는지 확인
+        Group group = member.getGroup();
+        if (group == null) {
+            throw new CustomException(ErrorCode.GROUP_NOT_FOUND);
+        }
+        
+        // 같은 그룹 내의 공개된 버킷리스트만 조회 가능
+        BucketList bucketList = bucketListRepository.findByIdAndMemberGroupAndPublic(bucketListId, group)
+                .orElseThrow(() -> new CustomException(ErrorCode.BUCKET_LIST_NOT_FOUND));
+        
+        log.info("그룹원 버킷리스트 조회 완료: ID = {}, 소유자 = {}", bucketListId, bucketList.getMember().getName());
+        
+        return BucketListResponse.of(bucketList);
     }
     
 }
