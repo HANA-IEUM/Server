@@ -43,6 +43,10 @@ public enum ErrorCode {
     GROUP_NOT_FOUND("GROUP_001", "그룹을 찾을 수 없거나 그룹에 속해있지 않습니다", HttpStatus.NOT_FOUND),
     MEMBER_ALREADY_JOIN_GROUP("GROUP_002", "이미 그룹에 가입되어 있습니다", HttpStatus.CONFLICT),
 
+    // 머니박스 관련 에러
+    MONEY_BOX_SETTINGS_NOT_FOUND("MONEY_BOX_001", "머니박스 설정을 찾을 수 없습니다", HttpStatus.NOT_FOUND),
+    MONEY_BOX_SETTINGS_ALREADY_EXISTS("MONEY_BOX_002", "해당 계좌에 대한 머니박스 설정이 이미 존재합니다", HttpStatus.CONFLICT),
+
     // 입력값 검증 에러
     INVALID_INPUT_VALUE("VALIDATION_001", "입력값이 올바르지 않습니다", HttpStatus.BAD_REQUEST),
 

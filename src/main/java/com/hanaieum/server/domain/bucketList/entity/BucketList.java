@@ -7,6 +7,8 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "bucket_lists")
@@ -47,12 +49,12 @@ public class BucketList extends BaseEntity {
     @Column(nullable = false, length = 50)
     private BucketListStatus status; // 상태
 
-    @Column(name="is_deleted", nullable = false)
+    @Column(name = "is_deleted", nullable = false)
     @Builder.Default
     private boolean deleted = false; // 삭제 여부
-    
+
     @OneToMany(mappedBy = "bucketList", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
-    private java.util.List<BucketParticipant> participants = new java.util.ArrayList<>();
-    
+    private List<BucketParticipant> participants = new ArrayList<>();
+
 }

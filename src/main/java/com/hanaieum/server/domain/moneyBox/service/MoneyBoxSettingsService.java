@@ -1,0 +1,25 @@
+package com.hanaieum.server.domain.moneyBox.service;
+
+import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxSettingsRequest;
+import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxSettingsResponse;
+
+import java.util.List;
+
+public interface MoneyBoxSettingsService {
+    
+    /**
+     * 머니박스 생성 (계좌 생성 + 설정 연결)
+     */
+    MoneyBoxSettingsResponse createMoneyBox(MoneyBoxSettingsRequest request);
+    
+    /**
+     * 머니박스 설정 수정 (별명만 수정)
+     */
+    MoneyBoxSettingsResponse updateMoneyBoxSettings(Long settingsId, MoneyBoxSettingsRequest request);
+    
+    /**
+     * 머니박스 삭제 (계좌와 설정 모두 삭제)
+     */
+    void deleteMoneyBoxSettings(Long settingsId);
+    
+}

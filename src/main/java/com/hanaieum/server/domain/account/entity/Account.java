@@ -8,6 +8,7 @@ import lombok.*;
 @Entity
 @Table(name = "accounts")
 @Getter
+@Setter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
@@ -41,6 +42,7 @@ public class Account extends BaseEntity {
     private AccountType accountType;
 
     @Column(name = "is_deleted", nullable = false)
+    @Builder.Default
     private boolean deleted = false;
 
     @Column(length = 50)
