@@ -44,6 +44,10 @@ public enum ErrorCode {
     // 메시지 관련 에러
     MESSAGE_SEND_FAILURE("MESSAGE_001", "메시지 전송에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
 
+    // 그룹 관련 에러
+    GROUP_NOT_FOUND("GROUP_001", "그룹을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    MEMBER_ALREADY_JOIN_GROUP("GROUP_002", "이미 참여한 그룹이 있습니다.", HttpStatus.CONFLICT),
+
     // 서버 에러
     INTERNAL_SERVER_ERROR("SERVER_001", "내부 서버 오류입니다", HttpStatus.INTERNAL_SERVER_ERROR);
 
