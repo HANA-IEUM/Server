@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Pattern;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Getter
 @Setter
@@ -35,4 +36,7 @@ public class BucketListRequest {
     
     @NotNull(message = "혼자/함께 여부는 필수 입력값입니다.")
     private Boolean togetherFlag; // 혼자/같이 여부
+    
+    // togetherFlag가 true일 때만 사용
+    private List<Long> selectedMemberIds; // 함께할 그룹원들의 ID 목록
 }

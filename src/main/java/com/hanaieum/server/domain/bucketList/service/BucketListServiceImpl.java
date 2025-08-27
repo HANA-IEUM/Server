@@ -7,7 +7,9 @@ import com.hanaieum.server.domain.bucketList.dto.BucketListResponse;
 import com.hanaieum.server.domain.bucketList.dto.BucketListUpdateRequest;
 import com.hanaieum.server.domain.bucketList.entity.BucketList;
 import com.hanaieum.server.domain.bucketList.entity.BucketListStatus;
+import com.hanaieum.server.domain.bucketList.entity.BucketParticipant;
 import com.hanaieum.server.domain.bucketList.repository.BucketListRepository;
+import com.hanaieum.server.domain.bucketList.repository.BucketParticipantRepository;
 import com.hanaieum.server.domain.group.entity.Group;
 import com.hanaieum.server.domain.member.entity.Member;
 import com.hanaieum.server.domain.member.repository.MemberRepository;
@@ -29,6 +31,7 @@ import java.util.List;
 public class BucketListServiceImpl implements BucketListService {
 
     private final BucketListRepository bucketListRepository;
+    private final BucketParticipantRepository bucketParticipantRepository;
     private final MemberRepository memberRepository;
 
     @Override
@@ -65,6 +68,11 @@ public class BucketListServiceImpl implements BucketListService {
         // 저장
         BucketList savedBucketList = bucketListRepository.save(bucketList);
         log.info("버킷리스트 생성 완료: ID = {}", savedBucketList.getId());
+
+        // 공동 버킷리스트인 경우 선택된 멤버들에게도 동일한 버킷리스트 생성
+        if (requestDto.getTogetherFlag() && requestDto.getSelectedMemberIds() != null && !requestDto.getSelectedMemberIds().isEmpty()) {
+            createSharedBucketLists(savedBucketList, requestDto.getSelectedMemberIds(), member);
+        }
 
         return BucketListResponse.of(savedBucketList);
     }
@@ -206,6 +214,73 @@ public class BucketListServiceImpl implements BucketListService {
         log.info("그룹원 버킷리스트 조회 완료: ID = {}, 소유자 = {}", bucketListId, bucketList.getMember().getName());
         
         return BucketListResponse.of(bucketList);
+    }
+    
+    /**
+     * 공동 버킷리스트 생성 - 선택된 멤버들에게 동일한 버킷리스트 생성
+     */
+    @Transactional
+    private void createSharedBucketLists(BucketList originalBucketList, List<Long> selectedMemberIds, Member creator) {
+        log.info("공동 버킷리스트 생성 시작 - 원본 ID: {}, 대상 멤버 수: {}", 
+                originalBucketList.getId(), selectedMemberIds.size());
+        
+        // 현재 사용자의 그룹 확인
+        Group creatorGroup = creator.getGroup();
+        if (creatorGroup == null) {
+            throw new CustomException(ErrorCode.GROUP_NOT_FOUND);
+        }
+        
+        for (Long memberId : selectedMemberIds) {
+            // 본인은 제외
+            if (memberId.equals(creator.getId())) {
+                continue;
+            }
+            
+            // 멤버 조회 및 같은 그룹인지 확인
+            Member targetMember = memberRepository.findById(memberId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
+            
+            if (targetMember.getGroup() == null || !targetMember.getGroup().getId().equals(creatorGroup.getId())) {
+                log.warn("다른 그룹의 멤버이므로 제외: memberId = {}", memberId);
+                continue;
+            }
+            
+            // 해당 멤버에게 동일한 버킷리스트 생성
+            BucketList sharedBucketList = BucketList.builder()
+                    .member(targetMember)
+                    .type(originalBucketList.getType())
+                    .title(originalBucketList.getTitle())
+                    .targetAmount(originalBucketList.getTargetAmount())
+                    .targetDate(originalBucketList.getTargetDate())
+                    .publicFlag(originalBucketList.isPublicFlag())
+                    .shareFlag(true) // 공동 버킷리스트이므로 항상 true
+                    .status(BucketListStatus.IN_PROGRESS)
+                    .deleted(false)
+                    .build();
+            
+            BucketList savedSharedBucketList = bucketListRepository.save(sharedBucketList);
+            
+            // 원본 버킷리스트에 참여자로 등록 (양방향 연결)
+            BucketParticipant originalParticipant = BucketParticipant.builder()
+                    .bucketList(originalBucketList)
+                    .member(targetMember)
+                    .isActive(true)
+                    .build();
+            bucketParticipantRepository.save(originalParticipant);
+            
+            // 새로 생성된 버킷리스트에 원래 생성자를 참여자로 등록
+            BucketParticipant sharedParticipant = BucketParticipant.builder()
+                    .bucketList(savedSharedBucketList)
+                    .member(creator)
+                    .isActive(true)
+                    .build();
+            bucketParticipantRepository.save(sharedParticipant);
+            
+            log.info("공동 버킷리스트 생성 완료 - 멤버: {}, 버킷리스트 ID: {}", 
+                    targetMember.getName(), savedSharedBucketList.getId());
+        }
+        
+        log.info("공동 버킷리스트 생성 완료");
     }
     
 }

@@ -51,4 +51,8 @@ public class BucketList extends BaseEntity {
     @Builder.Default
     private boolean deleted = false; // 삭제 여부
     
+    @OneToMany(mappedBy = "bucketList", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private java.util.List<BucketParticipant> participants = new java.util.ArrayList<>();
+    
 }
