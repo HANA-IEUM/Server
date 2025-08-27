@@ -37,7 +37,7 @@ jobs:
           target: "/home/ubuntu/app"
           strip_components: 2
 
-      # 5. EC2에서 애플리케이션 실행 (환경변수 포함)
+      # 5. EC2에서 애플리케이션 실행 (환경변수 주입)
       - name: Run Spring Boot App on EC2
         uses: appleboy/ssh-action@master
         with:
@@ -48,30 +48,28 @@ jobs:
             echo "기존 애플리케이션 종료 시도 (8080 포트)"
             sudo lsof -t -i:8080 | xargs --no-run-if-empty sudo kill -9
 
-            echo "환경변수 파일 생성"
+            echo "새 애플리케이션 실행 (환경변수 주입)"
             cd /home/ubuntu/app
-            cat > .env <<EOF
-            DB_URL=${{ secrets.DB_URL }}
-            DB_USERNAME=${{ secrets.DB_USERNAME }}
-            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-            JWT_SECRET=${{ secrets.JWT_SECRET }}
-            JWT_ACCESS_EXPIRATION=${{ secrets.JWT_ACCESS_EXPIRATION }}
-            JWT_REFRESH_EXPIRATION=${{ secrets.JWT_REFRESH_EXPIRATION }}
-            CORS_ALLOWED_ORIGINS=${{ secrets.CORS_ALLOWED_ORIGINS }}
-            SOLAPI_API_KEY=${{ secrets.SOLAPI_API_KEY }}
-            SOLAPI_API_SECRET=${{ secrets.SOLAPI_API_SECRET }}
-            SOLAPI_SENDER=${{ secrets.SOLAPI_SENDER }}
-            EOF
-
-            echo "새 애플리케이션 실행"
             JAR_FILE=$(ls *.jar | grep -v 'plain' | head -n 1)
-            nohup java -jar "$JAR_FILE" > app.log 2>&1 &
+
+            nohup env \
+              SPRING_DATASOURCE_URL="${{ secrets.DB_URL }}" \
+              SPRING_DATASOURCE_USERNAME="${{ secrets.DB_USERNAME }}" \
+              SPRING_DATASOURCE_PASSWORD="${{ secrets.DB_PASSWORD }}" \
+              JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+              JWT_ACCESS_EXPIRATION="${{ secrets.JWT_ACCESS_EXPIRATION }}" \
+              JWT_REFRESH_EXPIRATION="${{ secrets.JWT_REFRESH_EXPIRATION }}" \
+              CORS_ALLOWED_ORIGINS="${{ secrets.CORS_ALLOWED_ORIGINS }}" \
+              SOLAPI_API_KEY="${{ secrets.SOLAPI_API_KEY }}" \
+              SOLAPI_API_SECRET="${{ secrets.SOLAPI_API_SECRET }}" \
+              SOLAPI_SENDER="${{ secrets.SOLAPI_SENDER }}" \
+              java -jar "$JAR_FILE" > app.log 2>&1 &
+
             disown
 
             echo "애플리케이션 시작 대기 및 확인"
             sleep 10
 
-            # 애플리케이션이 실제로 실행되고 있는지 확인
             if lsof -t -i:8080 > /dev/null; then
               echo "애플리케이션이 8080 포트에서 실행 중입니다"
               echo "최근 로그:"
