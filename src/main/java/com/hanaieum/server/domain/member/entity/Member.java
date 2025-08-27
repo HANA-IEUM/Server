@@ -1,6 +1,7 @@
 package com.hanaieum.server.domain.member.entity;
 
 import com.hanaieum.server.common.entity.BaseEntity;
+import com.hanaieum.server.domain.group.entity.Group;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -51,5 +52,9 @@ public class Member extends BaseEntity {
     // 주계좌 연결 여부
     @Column(name = "is_main_account_linked", nullable = false)
     private boolean mainAccountLinked = false;
+
+    @ManyToOne
+    @JoinColumn(name = "group_id", nullable = true)
+    private Group group; // 각 Member는 하나의 Group에만 속함
 
 }

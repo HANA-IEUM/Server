@@ -27,4 +27,15 @@ public class MemberServiceImpl implements MemberService {
 
         log.info("주계좌 연결 확인 완료 - 회원 ID: {}", memberId);
     }
+
+    @Override
+    public void hideGroupPrompt(Long memberId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
+
+        member.setHideGroupPrompt(true);
+        memberRepository.save(member);
+
+        log.info("그룹 안내 숨김 처리 완료 - 회원 ID: {}", memberId);
+    }
 }

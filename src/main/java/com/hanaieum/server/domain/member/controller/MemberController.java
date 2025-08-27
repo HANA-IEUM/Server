@@ -29,4 +29,11 @@ public class MemberController {
         memberService.confirmMainAccountLink(userDetails.getId());
         return ResponseEntity.ok(ApiResponse.of(HttpStatus.OK, "주계좌가 연결되었습니다.", null));
     }
+
+    @Operation(summary = "그룹 안내 숨김", description = "그룹 안내 문구를 더 이상 보지 않도록 설정합니다.")
+    @PutMapping("/group-prompt/hide")
+    public ResponseEntity<ApiResponse<Void>> hideGroupPrompt(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        memberService.hideGroupPrompt(userDetails.getId());
+        return ResponseEntity.ok(ApiResponse.of(HttpStatus.OK, "그룹 안내가 숨겨졌습니다.", null));
+    }
 }
