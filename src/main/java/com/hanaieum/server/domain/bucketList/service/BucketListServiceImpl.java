@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -66,4 +67,42 @@ public class BucketListServiceImpl implements BucketListService {
         return BucketListResponse.of(savedBucketList);
     }
 
+    @Override
+    public List<BucketListResponse> getBucketLists() {
+        log.info("버킷리스트 목록 조회 요청");
+        
+        // 현재 로그인한 사용자 정보 가져오기
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        Long memberId = userDetails.getId();
+        
+        // 회원 조회
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
+        
+        // 삭제되지 않은 해당 회원의 버킷리스트 조회 (생성일 기준 내림차순)
+        List<BucketList> bucketLists = bucketListRepository.findByMemberAndDeletedOrderByCreatedAtDesc(member, false);
+        
+        log.info("버킷리스트 목록 조회 완료: 총 {}개", bucketLists.size());
+
+        return bucketLists.stream()
+                .map(BucketListResponse::of)
+                .toList();
+    }
+
+    @Override
+    public BucketListResponse updateBucketList(Long bucketListId, BucketListRequest requestDto) {
+        return null;
+    }
+
+    @Override
+    public void deleteBucketList(Long bucketListId) {
+        
+    }
+
+    @Override
+    public BucketListResponse getBucketListByUser(Long userId) {
+        return null;
+    }
+    
 }

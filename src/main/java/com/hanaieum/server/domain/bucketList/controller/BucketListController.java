@@ -12,10 +12,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @Slf4j
 @RestController
@@ -42,5 +41,30 @@ public class BucketListController {
                 .body(ApiResponse.created(response));
     }
 
+    @Operation(summary = "버킷리스트 목록 조회", description = "사용자의 버킷리스트 목록을 조회합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "버킷리스트 목록 조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "회원을 찾을 수 없음")
+    })
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<BucketListResponse>>> getBucketLists() {
+        log.info("버킷리스트 목록 조회 API 호출");
+
+        // 서비스 호출
+        List<BucketListResponse> bucketLists = bucketListService.getBucketLists();
+
+        return ResponseEntity.ok(ApiResponse.ok(bucketLists));
+    }
+
+    @DeleteMapping
+    public ResponseEntity<ApiResponse<Void>> deleteBucketList() {
+        return null;
+    }
+
+    @PatchMapping
+    public ResponseEntity<ApiResponse<Void>> updateBucketList() {
+        return null;
+    }
 
 }

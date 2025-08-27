@@ -36,7 +36,7 @@ public class VerificationController {
         return ResponseEntity.ok(ApiResponse.of(HttpStatus.OK, "인증번호가 발송되었습니다.", null));
     }
 
-    @Operation(summary = "인증번호 검증", description = "발송된 인증번호를 확인합니다. 인증번호는 5분간 유효합니다.")
+    @Operation(summary = "인증번호 검증", description = "발송된 인증번호를 확인합니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "인증번호 확인 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 인증번호"),
