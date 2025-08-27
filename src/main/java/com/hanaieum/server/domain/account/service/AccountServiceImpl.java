@@ -30,6 +30,10 @@ public class AccountServiceImpl implements AccountService {
     
     @Override
     public Long createAccount(Member member, String accountName, String bankName, AccountType accountType, Long balance, String password) {
+        return createAccount(member, accountName, bankName, accountType, balance, password, null);
+    }
+    
+    public Long createAccount(Member member, String accountName, String bankName, AccountType accountType, Long balance, String password, String nickname) {
         // 유니크한 계좌번호 생성
         String accountNumber = generateUniqueAccountNumber(accountType);
         
@@ -45,6 +49,7 @@ public class AccountServiceImpl implements AccountService {
                 .balance(balance)
                 .accountType(accountType)
                 .deleted(false)
+                .nickname(nickname)
                 .build();
                 
         Account savedAccount = accountRepository.save(account);
@@ -79,15 +84,18 @@ public class AccountServiceImpl implements AccountService {
     }
     
     @Override
-    public Long createMoneyBoxAccount(Long memberId, String accountName) {
+    public Long createMoneyBoxAccount(Long memberId, String accountName, String nickname) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
+        
         // 독립 실행용 - 잔액 0원, 비밀번호 1234
-        return createAccount(memberId, accountName, "하나은행", AccountType.MONEY_BOX, 0L, "1234");
+        return createAccount(member, accountName, "하나은행", AccountType.MONEY_BOX, 0L, "1234", nickname);
     }
     
     @Override
-    public Long createMoneyBoxAccount(Member member, String accountName) {
+    public Long createMoneyBoxAccount(Member member, String accountName, String nickname) {
         // 연계 실행용 - 잔액 0원, 비밀번호 1234 
-        return createAccount(member, accountName, "하나은행", AccountType.MONEY_BOX, 0L, "1234");
+        return createAccount(member, accountName, "하나은행", AccountType.MONEY_BOX, 0L, "1234", nickname);
     }
 
     // AccountType.MAIN (주계좌) : 14자리 숫자 (XXX-ZZZZZZ-ZZCYY)

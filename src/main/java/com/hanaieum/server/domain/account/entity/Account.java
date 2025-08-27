@@ -43,4 +43,7 @@ public class Account extends BaseEntity {
     @Column(name = "is_deleted", nullable = false)
     private boolean deleted = false;
 
+    @Column(length = 50)
+    private String nickname;
+
 }
