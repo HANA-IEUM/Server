@@ -37,7 +37,33 @@ jobs:
           target: "/home/ubuntu/app"
           strip_components: 2
 
-      # 5. EC2에서 애플리케이션 실행 (환경변수 주입)
+      # 5. 환경변수 파일 생성
+      - name: Create .env file on EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/app
+            
+            # .env 파일 생성
+            cat > .env << EOF
+            DB_URL=${{ secrets.DB_URL }}
+            DB_USERNAME=${{ secrets.DB_USERNAME }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            JWT_ACCESS_EXPIRATION=${{ secrets.JWT_ACCESS_EXPIRATION }}
+            JWT_REFRESH_EXPIRATION=${{ secrets.JWT_REFRESH_EXPIRATION }}
+            CORS_ALLOWED_ORIGINS=${{ secrets.CORS_ALLOWED_ORIGINS }}
+            SOLAPI_API_KEY=${{ secrets.SOLAPI_API_KEY }}
+            SOLAPI_API_SECRET=${{ secrets.SOLAPI_API_SECRET }}
+            SOLAPI_SENDER=${{ secrets.SOLAPI_SENDER }}
+            EOF
+            
+            echo "환경변수 파일 생성 완료"
+
+      # 6. EC2에서 애플리케이션 실행
       - name: Run Spring Boot App on EC2
         uses: appleboy/ssh-action@master
         with:
@@ -47,37 +73,36 @@ jobs:
           script: |
             echo "기존 애플리케이션 종료 시도 (8080 포트)"
             sudo lsof -t -i:8080 | xargs --no-run-if-empty sudo kill -9
+            sleep 3
 
-            echo "새 애플리케이션 실행 (환경변수 주입)"
+            echo "새 애플리케이션 실행"
             cd /home/ubuntu/app
             JAR_FILE=$(ls *.jar | grep -v 'plain' | head -n 1)
+            
+            if [ -z "$JAR_FILE" ]; then
+              echo "JAR 파일을 찾을 수 없습니다"
+              exit 1
+            fi
+            
+            echo "실행할 JAR 파일: $JAR_FILE"
 
-            nohup env \
-              DB_URL="${{ secrets.DB_URL }}" \
-              DB_USERNAME="${{ secrets.DB_USERNAME }}" \
-              DB_PASSWORD="${{ secrets.DB_PASSWORD }}" \
-              JWT_SECRET="${{ secrets.JWT_SECRET }}" \
-              JWT_ACCESS_EXPIRATION="${{ secrets.JWT_ACCESS_EXPIRATION }}" \
-              JWT_REFRESH_EXPIRATION="${{ secrets.JWT_REFRESH_EXPIRATION }}" \
-              CORS_ALLOWED_ORIGINS="${{ secrets.CORS_ALLOWED_ORIGINS }}" \
-              SOLAPI_API_KEY="${{ secrets.SOLAPI_API_KEY }}" \
-              SOLAPI_API_SECRET="${{ secrets.SOLAPI_API_SECRET }}" \
-              SOLAPI_SENDER="${{ secrets.SOLAPI_SENDER }}" \
-              java -jar "$JAR_FILE" > app.log 2>&1 &
-
+            # .env 파일 로드하여 환경변수로 내보내기
+            export $(grep -v '^#' .env | xargs)
+            
+            nohup java -jar "$JAR_FILE" > app.log 2>&1 &
             disown
 
             echo "애플리케이션 시작 대기 및 확인"
-            sleep 10
+            sleep 15
 
             if lsof -t -i:8080 > /dev/null; then
               echo "애플리케이션이 8080 포트에서 실행 중입니다"
               echo "최근 로그:"
-              tail -n 15 app.log
+              tail -n 20 app.log
             else
               echo "애플리케이션 시작 실패"
-              echo "오류 로그:"
-              tail -n 100 app.log
+              echo "전체 오류 로그:"
+              cat app.log
               exit 1
             fi
 
