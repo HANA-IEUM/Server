@@ -1,6 +1,5 @@
 package com.hanaieum.server.domain.member.entity;
 
-
 import com.hanaieum.server.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -31,11 +30,15 @@ public class Member extends BaseEntity {
     @Column(nullable = false)
     private LocalDate birthDate; // 생년월일
 
-    @Column(nullable = false, length = 1)
-    private String gender; // 성별 (M/F)
-
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private boolean isActive = true; // 활성화 여부
+    private Gender gender; // 성별 (M/F)
+
+    @Column(name = "is_active", nullable = false)
+    private boolean active = true; // 활성화 여부
+
+    @Column(name = "is_deleted", nullable = false)
+    private boolean deleted = false; // 삭제 여부 (soft delete)
 
     // 그룹 안내 문구 (다시 보지 않기)
     @Column(nullable = false)
@@ -44,5 +47,9 @@ public class Member extends BaseEntity {
     // 월 생활비
     @Column(nullable = false)
     private Integer monthlyLivingCost;
+
+    // 주계좌 연결 여부
+    @Column(name = "is_main_account_linked", nullable = false)
+    private boolean mainAccountLinked = false;
 
 }

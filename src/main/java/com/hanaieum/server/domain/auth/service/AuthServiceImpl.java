@@ -8,6 +8,8 @@ import com.hanaieum.server.domain.auth.dto.SignupRequest;
 import com.hanaieum.server.domain.auth.dto.TokenResponse;
 import com.hanaieum.server.domain.auth.entity.RefreshToken;
 import com.hanaieum.server.domain.auth.repository.RefreshTokenRepository;
+import com.hanaieum.server.domain.account.service.AccountService;
+import com.hanaieum.server.domain.member.entity.Gender;
 import com.hanaieum.server.domain.member.entity.Member;
 import com.hanaieum.server.domain.member.repository.MemberRepository;
 import com.hanaieum.server.security.JwtTokenProvider;
@@ -25,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthServiceImpl implements AuthService {
 
     private final MemberRepository memberRepository;
+    private final AccountService accountService;
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordEncoder passwordEncoder;
@@ -48,13 +51,19 @@ public class AuthServiceImpl implements AuthService {
                 .password(encodedPassword)
                 .name(signupRequest.getName())
                 .birthDate(signupRequest.getBirthDate())
-                .gender(signupRequest.getGender())
+                .gender(Gender.valueOf(signupRequest.getGender()))
                 .monthlyLivingCost(signupRequest.getMonthlyLivingCost())
-                .isActive(true)
+                .active(true)
+                .deleted(false)
                 .hideGroupPrompt(false)
+                .mainAccountLinked(false)
                 .build();
 
-        memberRepository.save(member);
+        Member savedMember = memberRepository.save(member);
+        
+        // 주계좌 자동 생성
+        accountService.createMainAccount(savedMember);
+        
         log.info("회원가입 완료 - 전화번호: {}", signupRequest.getPhoneNumber());
     }
 
@@ -69,8 +78,8 @@ public class AuthServiceImpl implements AuthService {
             throw new CustomException(ErrorCode.INVALID_PASSWORD);
         }
 
-        // 비활성화된 회원 체크
-        if (!member.isActive()) {
+        // 비활성화되거나 삭제된 회원 체크
+        if (!member.isActive() || member.isDeleted()) {
             throw new CustomException(ErrorCode.MEMBER_NOT_FOUND);
         }
 
@@ -91,7 +100,7 @@ public class AuthServiceImpl implements AuthService {
 
         log.info("로그인 성공 - 회원 ID: {}", member.getId());
 
-        return TokenResponse.of(accessToken, refreshTokenValue, accessTokenExpiration, member.isHideGroupPrompt());
+        return TokenResponse.of(accessToken, refreshTokenValue, accessTokenExpiration, member.isHideGroupPrompt(), member.isMainAccountLinked());
     }
 
     @Override
@@ -123,6 +132,7 @@ public class AuthServiceImpl implements AuthService {
 
         log.info("토큰 갱신 완료 - 회원 ID: {}", refreshToken.getMember().getId());
 
-        return TokenResponse.of(newAccessToken, refreshToken.getToken(), accessTokenExpiration, refreshToken.getMember().isHideGroupPrompt());
+        return TokenResponse.of(newAccessToken, refreshToken.getToken(), accessTokenExpiration, refreshToken.getMember().isHideGroupPrompt(), refreshToken.getMember().isMainAccountLinked());
     }
+    
 }
