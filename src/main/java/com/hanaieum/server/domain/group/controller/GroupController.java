@@ -69,6 +69,9 @@ public class GroupController {
             @AuthenticationPrincipal CustomUserDetails userDetails // 현재 로그인된 멤버 정보
     ) {
         GroupResponse groupResponse = groupService.getGroupInfo(userDetails.getId());
+        if(groupResponse == null) {
+            return ResponseEntity.ok(ApiResponse.of(HttpStatus.OK, "NO_GROUP", null));
+        }
         // 그룹에 속하지 않은 경우 null이 반환되므로, ApiResponse.ok(null)이 됨 (data 필드가 null)
         return ResponseEntity.ok(ApiResponse.ok(groupResponse));
     }
