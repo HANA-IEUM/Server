@@ -4,10 +4,10 @@ import com.hanaieum.server.domain.bucketList.entity.BucketLIstType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Pattern;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 
 @Getter
 @Setter
@@ -26,8 +26,9 @@ public class BucketListRequest {
     @Positive(message = "목표 금액은 0보다 커야 합니다.")
     private BigDecimal targetAmount; // 목표금액
     
-    @NotNull(message = "목표 날짜는 필수 입력값입니다.")
-    private LocalDate targetDate; // 목표기간
+    @NotNull(message = "목표 개월수는 필수 입력값입니다.")
+    @Pattern(regexp = "^(3|6|12|24)$", message = "목표 개월수는 3, 6, 12, 24개월 중 하나여야 합니다.")
+    private String targetMonths; // 목표기간(개월수)
     
     @NotNull(message = "공개 여부는 필수 입력값입니다.")
     private Boolean publicFlag; // 공개여부

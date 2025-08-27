@@ -17,6 +17,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -40,26 +42,28 @@ public class BucketListServiceImpl implements BucketListService {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
 
+        // targetMonths를 현재 날짜에 더해서 targetDate 계산
+        int months = Integer.parseInt(requestDto.getTargetMonths());
+        LocalDate targetDate = LocalDate.now().plusMonths(months);
+
         // 버킷리스트 엔티티 생성
         BucketList bucketList = BucketList.builder()
                 .member(member)
                 .type(requestDto.getType())
                 .title(requestDto.getTitle())
                 .targetAmount(requestDto.getTargetAmount())
-                .targetDate(requestDto.getTargetDate())
+                .targetDate(targetDate)
                 .publicFlag(requestDto.getPublicFlag())
                 .shareFlag(requestDto.getTogetherFlag())
                 .status(BucketListStatus.IN_PROGRESS) // 생성 시 기본값: 진행중
-                .active(true) // 기본값: 활성화
+                .deleted(false) // 기본값: 활성화
                 .build();
 
         // 저장
         BucketList savedBucketList = bucketListRepository.save(bucketList);
         log.info("버킷리스트 생성 완료: ID = {}", savedBucketList.getId());
 
-        // Response DTO로 변환하여 반환
-        return BucketListResponse.from(savedBucketList);
+        return BucketListResponse.of(savedBucketList);
     }
-
 
 }

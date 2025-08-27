@@ -46,7 +46,7 @@ public class BucketList extends BaseEntity {
     @Column(nullable = false, length = 50)
     private BucketListStatus status; // 상태
 
-    @Column(name="is_active", nullable = false)
-    private boolean active = true; // 활성화 여부
+    @Column(name="is_deleted", nullable = false)
+    private boolean deleted = true; // 활성화 여부
     
 }

@@ -31,7 +31,7 @@ public class BucketListResponse {
     private LocalDateTime createdAt; // 생성일시
     private LocalDateTime updatedAt; // 수정일시
 
-    public static BucketListResponse from(BucketList bucketList) {
+    public static BucketListResponse of(BucketList bucketList) {
         return BucketListResponse.builder()
                 .id(bucketList.getId())
                 .memberId(bucketList.getMember().getId())

@@ -39,7 +39,7 @@ public class BucketListController {
         log.info("버킷리스트 생성 API 호출");
         BucketListResponse response = bucketListService.createBucketList(requestDto);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.of(HttpStatus.CREATED, "버킷리스트가 생성되었습니다.", response));
+                .body(ApiResponse.created(response));
     }
 
 
