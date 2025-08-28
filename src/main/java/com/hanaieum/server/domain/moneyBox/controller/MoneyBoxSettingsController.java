@@ -77,7 +77,21 @@ public class MoneyBoxSettingsController {
         
         moneyBoxSettingsService.deleteMoneyBoxSettings(settingsId);
         
-        return ResponseEntity.ok(ApiResponse.ok());
+                return ResponseEntity.ok(ApiResponse.ok());
     }
-
+    
+    @Operation(summary = "내 머니박스 목록 조회", description = "현재 사용자의 모든 머니박스 목록을 조회합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "머니박스 목록 조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패")
+    })
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<MoneyBoxSettingsResponse>>> getMyMoneyBoxList() {
+        log.info("내 머니박스 목록 조회 API 호출");
+        
+        List<MoneyBoxSettingsResponse> response = moneyBoxSettingsService.getMyMoneyBoxList();
+        
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+ 
 }

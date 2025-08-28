@@ -22,4 +22,9 @@ public interface MoneyBoxSettingsService {
      */
     void deleteMoneyBoxSettings(Long settingsId);
     
+    /**
+     * 사용자의 모든 머니박스 목록 조회
+     */
+    List<MoneyBoxSettingsResponse> getMyMoneyBoxList();
+    
 }

@@ -141,4 +141,22 @@ public class MoneyBoxSettingsServiceImpl implements MoneyBoxSettingsService {
         log.info("머니박스 삭제 완료: SettingsID = {}, AccountID = {}", settingsId, account.getId());
     }
     
+    @Override
+    public List<MoneyBoxSettingsResponse> getMyMoneyBoxList() {
+        log.info("내 머니박스 목록 조회 요청");
+        
+        Member currentMember = getCurrentMember();
+        
+        List<MoneyBoxSettings> settingsList = moneyBoxSettingsRepository
+                .findByMemberAndDeletedFalse(currentMember);
+        
+        List<MoneyBoxSettingsResponse> responses = settingsList.stream()
+                .map(MoneyBoxSettingsResponse::of)
+                .toList();
+        
+        log.info("내 머니박스 목록 조회 완료: {} 개", responses.size());
+        
+        return responses;
+    }
+    
 }
