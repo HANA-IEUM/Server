@@ -83,14 +83,14 @@ public class AccountServiceImpl implements AccountService {
         return createAccount(member, accountName, bankName, accountType, balance, password);
     }
     
-    @Override
-    public Long createMoneyBoxAccount(Long memberId, String accountName, String nickname) {
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
-        
-        // 독립 실행용 - 잔액 0원, 비밀번호 1234
-        return createAccount(member, accountName, "하나은행", AccountType.MONEY_BOX, 0L, "1234", nickname);
-    }
+    //    @Override
+    //    public Long createMoneyBoxAccount(Long memberId, String accountName, String nickname) {
+    //        Member member = memberRepository.findById(memberId)
+    //                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
+    //
+    //        // 독립 실행용 - 잔액 0원, 비밀번호 1234
+    //        return createAccount(member, accountName, "하나은행", AccountType.MONEY_BOX, 0L, "1234", nickname);
+    //    }
     
     @Override
     public Long createMoneyBoxAccount(Member member, String accountName, String nickname) {

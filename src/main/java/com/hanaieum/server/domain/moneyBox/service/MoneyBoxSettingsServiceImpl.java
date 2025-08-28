@@ -105,11 +105,20 @@ public class MoneyBoxSettingsServiceImpl implements MoneyBoxSettingsService {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
         
-        // 머니박스 별명만 수정 (버킷리스트는 변경 불가)
-        settings.setBoxName(request.getBoxName());
+        // 머니박스 별명 수정 및 연결된 계좌 정보 업데이트
+        String newBoxName = request.getBoxName();
+        
+        // MoneyBoxSettings의 별명 수정
+        settings.setBoxName(newBoxName);
+        
+        // 연결된 Account의 이름과 닉네임도 함께 수정
+        Account account = settings.getAccount();
+        account.setName(newBoxName);      // 계좌명 변경
+        account.setNickname(newBoxName);  // 계좌 닉네임 변경
+        accountRepository.save(account);
         
         MoneyBoxSettings updatedSettings = moneyBoxSettingsRepository.save(settings);
-        log.info("머니박스 설정 수정 완료: ID = {}", settingsId);
+        log.info("머니박스 설정 수정 완료: ID = {}, 새 이름 = {}", settingsId, newBoxName);
         
         return MoneyBoxSettingsResponse.of(updatedSettings);
     }
