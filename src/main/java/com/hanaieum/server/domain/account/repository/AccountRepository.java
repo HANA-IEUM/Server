@@ -12,16 +12,11 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
-@Repository
 public interface AccountRepository extends JpaRepository<Account, Long> {
 
     boolean existsByNumber(String number);
     
     Optional<Account> findByMemberAndAccountTypeAndDeletedFalse(Member member, AccountType accountType);
-
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT a FROM Account a WHERE a.id = :id")
-    Optional<Account> findByIdWithLock(@Param("id") Long id);
 
     Optional<Account> findByIdAndDeletedFalse(Long id);
 

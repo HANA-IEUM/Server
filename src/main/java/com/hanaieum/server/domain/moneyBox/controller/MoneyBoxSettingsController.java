@@ -70,7 +70,7 @@ public class MoneyBoxSettingsController {
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
     
-    @Operation(summary = "머니박스 삭제", description = "머니박스를 삭제합니다. 연결된 계좌도 함께 삭제되며, 버킷리스트는 유지됩니다.")
+    @Operation(summary = "머니박스 삭제", description = "머니박스를 삭제합니다. 연결된 계좌도 함께 삭제되며, 버킷리스트는 유지됩니다.", deprecated = true)
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "머니박스 설정 삭제 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
