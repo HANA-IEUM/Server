@@ -132,6 +132,20 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     @Transactional(readOnly = true)
+    public Account getMainAccountByMemberId(Long memberId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
+        
+        Account mainAccount = accountRepository.findByMemberAndAccountTypeAndDeletedFalse(member, AccountType.MAIN)
+                .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
+
+        log.info("주계좌 조회 완료 - 회원 ID: {}, 계좌 ID: {}", memberId, mainAccount.getId());
+        
+        return mainAccount;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Account findById(Long accountId) {
         return accountRepository.findByIdAndDeletedFalse(accountId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));

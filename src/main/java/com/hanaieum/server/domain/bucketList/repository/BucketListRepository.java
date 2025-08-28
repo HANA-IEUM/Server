@@ -28,4 +28,7 @@ public interface BucketListRepository extends JpaRepository<BucketList, Long> {
     // 특정 그룹원의 특정 버킷리스트 조회 (공개된 것만)
     @Query("SELECT bl FROM BucketList bl WHERE bl.id = :bucketListId AND bl.member.group = :group AND bl.deleted = false AND bl.publicFlag = true")
     Optional<BucketList> findByIdAndMemberGroupAndPublic(@Param("bucketListId") Long bucketListId, @Param("group") Group group);
+    
+    // Transfer Service용 - ID로 삭제되지 않은 버킷리스트 조회
+    Optional<BucketList> findByIdAndDeletedFalse(Long id);
 }

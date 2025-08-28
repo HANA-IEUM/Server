@@ -22,6 +22,7 @@ public interface AccountService {
 
     // === 계좌 조회 메서드 ===
     MainAccountResponse getMainAccount(Member member);
+    Account getMainAccountByMemberId(Long memberId);
     Account findById(Long accountId);
     Account findByIdWithLock(Long accountId);
 
