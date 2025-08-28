@@ -68,7 +68,6 @@ public class MoneyBoxSettingsServiceImpl implements MoneyBoxSettingsService {
         // 머니박스 계좌 생성 (MONEY_BOX 타입)
         Long accountId = accountService.createMoneyBoxAccount(
                 currentMember, 
-                request.getBoxName(), 
                 request.getBoxName()
         );
         
@@ -114,7 +113,6 @@ public class MoneyBoxSettingsServiceImpl implements MoneyBoxSettingsService {
         // 연결된 Account의 이름과 닉네임도 함께 수정
         Account account = settings.getAccount();
         account.setName(newBoxName);      // 계좌명 변경
-        account.setNickname(newBoxName);  // 계좌 닉네임 변경
         accountRepository.save(account);
         
         MoneyBoxSettings updatedSettings = moneyBoxSettingsRepository.save(settings);

@@ -250,7 +250,7 @@ public class BucketListServiceImpl implements BucketListService {
      * 공동 버킷리스트 생성 - 선택된 멤버들에게 동일한 버킷리스트 생성
      */
     @Transactional
-    private void createSharedBucketLists(BucketList originalBucketList, List<Long> selectedMemberIds, Member creator) {
+    protected void createSharedBucketLists(BucketList originalBucketList, List<Long> selectedMemberIds, Member creator) {
         log.info("공동 버킷리스트 생성 시작 - 원본 ID: {}, 대상 멤버 수: {}", 
                 originalBucketList.getId(), selectedMemberIds.size());
         
@@ -317,7 +317,7 @@ public class BucketListServiceImpl implements BucketListService {
      * 버킷리스트 참여자 업데이트
      */
     @Transactional
-    private void updateBucketListParticipants(BucketList bucketList, List<Long> selectedMemberIds) {
+    protected void updateBucketListParticipants(BucketList bucketList, List<Long> selectedMemberIds) {
         log.info("버킷리스트 참여자 업데이트 - 버킷리스트 ID: {}, 선택된 멤버 수: {}", 
                 bucketList.getId(), selectedMemberIds.size());
         
@@ -380,7 +380,7 @@ public class BucketListServiceImpl implements BucketListService {
      * 모든 참여자 비활성화 (혼자 진행으로 변경 시)
      */
     @Transactional
-    private void deactivateAllParticipants(BucketList bucketList) {
+    protected void deactivateAllParticipants(BucketList bucketList) {
         log.info("모든 참여자 비활성화 - 버킷리스트 ID: {}", bucketList.getId());
         
         List<BucketParticipant> participants = bucketParticipantRepository.findByBucketListAndIsActive(bucketList, true);
