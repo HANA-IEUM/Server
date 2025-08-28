@@ -36,10 +36,14 @@ public class AutoTransferSchedule extends BaseEntity {
     @Column(name = "transfer_day", nullable = false)
     private Integer transferDay; // 이체일(매월)
     
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 50)
-    private AutoTransferStatus status; // 상태(ACTIVE/PAUSED/STOPPED)
-    
     @Column(name = "next_transfer_date")
     private LocalDateTime nextTransferDate; // 다음 이체일
+    
+    @Column(name = "is_active", nullable = false)
+    @Builder.Default
+    private Boolean active = true; // 활성화/비활성화
+    
+    @Column(name = "is_deleted", nullable = false)
+    @Builder.Default
+    private Boolean deleted = false; // 삭제 여부
 }
