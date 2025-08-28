@@ -42,3 +42,10 @@ springdoc:
   api-docs:
     path: /v3/api-docs
     enabled: true
+
+# S3 설정
+aws:
+  access-key: ${AWS_ACCESS_KEY_ID}
+  secret-key: ${AWS_SECRET_ACCESS_KEY}
+  region: ap-northeast-2
+  bucket: hana-ieum
