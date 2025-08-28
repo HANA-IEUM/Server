@@ -8,12 +8,15 @@ import com.hanaieum.server.domain.account.entity.AccountType;
 import com.hanaieum.server.domain.account.repository.AccountRepository;
 import com.hanaieum.server.domain.member.entity.Member;
 import com.hanaieum.server.domain.member.repository.MemberRepository;
+import jakarta.persistence.LockModeType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.List;
@@ -30,10 +33,6 @@ public class AccountServiceImpl implements AccountService {
     
     @Override
     public Long createAccount(Member member, String accountName, String bankName, AccountType accountType, Long balance, String password) {
-        return createAccount(member, accountName, bankName, accountType, balance, password, null);
-    }
-    
-    public Long createAccount(Member member, String accountName, String bankName, AccountType accountType, Long balance, String password, String nickname) {
         // 유니크한 계좌번호 생성
         String accountNumber = generateUniqueAccountNumber(accountType);
         
@@ -49,7 +48,6 @@ public class AccountServiceImpl implements AccountService {
                 .balance(balance)
                 .accountType(accountType)
                 .deleted(false)
-                .nickname(nickname)
                 .build();
                 
         Account savedAccount = accountRepository.save(account);
@@ -84,18 +82,18 @@ public class AccountServiceImpl implements AccountService {
     }
     
     @Override
-    public Long createMoneyBoxAccount(Long memberId, String accountName, String nickname) {
+    public Long createMoneyBoxAccount(Long memberId, String accountName) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
         
         // 독립 실행용 - 잔액 0원, 비밀번호 1234
-        return createAccount(member, accountName, "하나은행", AccountType.MONEY_BOX, 0L, "1234", nickname);
+        return createAccount(member, accountName, "하나은행", AccountType.MONEY_BOX, 0L, "1234");
     }
     
     @Override
-    public Long createMoneyBoxAccount(Member member, String accountName, String nickname) {
+    public Long createMoneyBoxAccount(Member member, String accountName) {
         // 연계 실행용 - 잔액 0원, 비밀번호 1234 
-        return createAccount(member, accountName, "하나은행", AccountType.MONEY_BOX, 0L, "1234", nickname);
+        return createAccount(member, accountName, "하나은행", AccountType.MONEY_BOX, 0L, "1234");
     }
 
     // AccountType.MAIN (주계좌) : 14자리 숫자 (XXX-ZZZZZZ-ZZCYY)
@@ -131,4 +129,66 @@ public class AccountServiceImpl implements AccountService {
         
         return MainAccountResponse.of(mainAccount);
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Account findById(Long accountId) {
+        return accountRepository.findByIdAndDeletedFalse(accountId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
+    }
+
+    @Override
+    public Account findByIdWithLock(Long accountId) {
+        return accountRepository.findByIdAndDeletedFalseWithLock(accountId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public void validateAccountOwnership(Long accountId, Long memberId) {
+        Account account = findById(accountId);
+        if (!account.getMember().getId().equals(memberId)) {
+            throw new CustomException(ErrorCode.ACCOUNT_ACCESS_DENIED);
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public void validateAccountPassword(Long accountId, String password) {
+        Account account = findById(accountId);
+        if (!passwordEncoder.matches(password, account.getPassword())) {
+            throw new CustomException(ErrorCode.INVALID_ACCOUNT_PASSWORD);
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public void validateSufficientBalance(Long accountId, BigDecimal amount) {
+        Account account = findById(accountId);
+        if (account.getBalance() < amount.longValue()) {
+            throw new CustomException(ErrorCode.INSUFFICIENT_BALANCE);
+        }
+    }
+
+    @Override
+    public void debitBalance(Long accountId, BigDecimal amount) {
+        Account account = findByIdWithLock(accountId);
+        long newBalance = account.getBalance() - amount.longValue();
+        if (newBalance < 0) {
+            throw new CustomException(ErrorCode.INSUFFICIENT_BALANCE);
+        }
+        account.updateBalance(newBalance);
+        accountRepository.save(account);
+        log.info("출금 처리 완료 - 계좌 ID: {}, 출금액: {}, 잔액: {}", accountId, amount, newBalance);
+    }
+
+    @Override
+    public void creditBalance(Long accountId, BigDecimal amount) {
+        Account account = findByIdWithLock(accountId);
+        long newBalance = account.getBalance() + amount.longValue();
+        account.updateBalance(newBalance);
+        accountRepository.save(account);
+        log.info("입금 처리 완료 - 계좌 ID: {}, 입금액: {}, 잔액: {}", accountId, amount, newBalance);
+    }
+
 }

@@ -84,7 +84,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         // JWT 토큰 생성
-        String accessToken = jwtTokenProvider.generateAccessToken(member.getId());
+        String accessToken = jwtTokenProvider.generateAccessToken(member.getId(), member.getName(), member.getPhoneNumber());
         String refreshTokenValue = jwtTokenProvider.generateRefreshToken(member.getId());
 
         // 기존 리프레시 토큰 삭제 후 새로 저장
@@ -128,7 +128,8 @@ public class AuthServiceImpl implements AuthService {
         }
 
         // 새로운 Access Token 생성
-        String newAccessToken = jwtTokenProvider.generateAccessToken(refreshToken.getMember().getId());
+        Member member = refreshToken.getMember();
+        String newAccessToken = jwtTokenProvider.generateAccessToken(member.getId(), member.getName(), member.getPhoneNumber());
 
         log.info("토큰 갱신 완료 - 회원 ID: {}", refreshToken.getMember().getId());
 
