@@ -40,7 +40,7 @@ public class TransferServiceImpl implements TransferService {
         // 5. 출금 처리
         accountService.debitBalance(fromAccountId, amount);
         
-        // 6. 입금 처리  
+        // 6. 입금 처리
         accountService.creditBalance(toAccountId, amount);
         
         // 7. 거래 내역 기록
@@ -91,5 +91,41 @@ public class TransferServiceImpl implements TransferService {
         );
         
         log.info("머니박스 후원 완료 - 출금계좌: {}, 입금계좌: {}, 금액: {}, 버킷ID: {}", fromAccountId, toAccountId, amount, bucketId);
+    }
+
+    @Override
+    public void achieveBucket(Long fromAccountId, Long toAccountId, BigDecimal amount, String password, Long bucketId) {
+        log.info("버킷리스트 달성 인출 시작 - 머니박스: {}, 입금계좌: {}, 금액: {}, 버킷ID: {}", fromAccountId, toAccountId, amount, bucketId);
+        
+        // 1. 계좌 소유권 검증은 컨트롤러에서 수행되었다고 가정
+        
+        // 2. 머니박스 계좌 비밀번호 검증
+        accountService.validateAccountPassword(fromAccountId, password);
+        
+        // 3. 머니박스 잔액 검증
+        accountService.validateSufficientBalance(fromAccountId, amount);
+        
+        // 4. 계좌 정보 조회 (락과 함께) - deleted=false 조건 자동 적용
+        Account fromAccount = accountService.findByIdWithLock(fromAccountId);
+        Account toAccount = accountService.findByIdWithLock(toAccountId);
+        
+        // 5. 머니박스에서 출금 처리
+        accountService.debitBalance(fromAccountId, amount);
+        
+        // 6. 주계좌로 입금 처리
+        accountService.creditBalance(toAccountId, amount);
+        
+        // 7. 거래 내역 기록
+        transactionService.createTransaction(
+            fromAccount, 
+            toAccount, 
+            amount, 
+            TransactionType.TRANSFER,
+            ReferenceType.BUCKET_ACHIEVEMENT,
+            ReferenceType.BUCKET_ACHIEVEMENT.getDescription(),
+            bucketId
+        );
+        
+        log.info("버킷리스트 달성 인출 완료 - 머니박스: {}, 입금계좌: {}, 금액: {}, 버킷ID: {}", fromAccountId, toAccountId, amount, bucketId);
     }
 }

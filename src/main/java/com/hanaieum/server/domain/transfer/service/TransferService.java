@@ -8,4 +8,6 @@ public interface TransferService {
     
     void sponsorMoneyBox(Long fromAccountId, Long toAccountId, BigDecimal amount, String password, Long bucketId);
     
+    void achieveBucket(Long fromAccountId, Long toAccountId, BigDecimal amount, String password, Long bucketId);
+    
 }
