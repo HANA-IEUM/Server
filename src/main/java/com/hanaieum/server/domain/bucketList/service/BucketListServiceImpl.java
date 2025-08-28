@@ -110,8 +110,8 @@ public class BucketListServiceImpl implements BucketListService {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
         Long memberId = userDetails.getId();
         
-        // 삭제되지 않은 버킷리스트만 조회
-        BucketList bucketList = bucketListRepository.findByIdAndDeleted(bucketListId, false)
+        // 삭제되지 않은 버킷리스트만 조회 (참여자 정보 포함)
+        BucketList bucketList = bucketListRepository.findByIdAndDeletedWithParticipants(bucketListId, false)
                 .orElseThrow(() -> new CustomException(ErrorCode.BUCKET_LIST_NOT_FOUND));
         
         // 소유자 확인
@@ -136,8 +136,8 @@ public class BucketListServiceImpl implements BucketListService {
         CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
         Long memberId = userDetails.getId();
         
-        // 삭제되지 않은 버킷리스트만 조회
-        BucketList bucketList = bucketListRepository.findByIdAndDeleted(bucketListId, false)
+        // 삭제되지 않은 버킷리스트만 조회 (참여자 정보 포함)
+        BucketList bucketList = bucketListRepository.findByIdAndDeletedWithParticipants(bucketListId, false)
                 .orElseThrow(() -> new CustomException(ErrorCode.BUCKET_LIST_NOT_FOUND));
         
         // 소유자 확인
@@ -145,8 +145,38 @@ public class BucketListServiceImpl implements BucketListService {
             throw new CustomException(ErrorCode.BUCKET_LIST_ACCESS_DENIED);
         }
         
-        // 제목만 수정 (현재 요구사항)
+        // 제목 수정
         bucketList.setTitle(requestDto.getTitle());
+        
+        // 공개여부 수정 (null이 아닌 경우에만)
+        if (requestDto.getPublicFlag() != null) {
+            bucketList.setPublicFlag(requestDto.getPublicFlag());
+            log.info("공개여부 수정: {}", requestDto.getPublicFlag());
+        }
+        
+        // 혼자/같이 진행 여부 수정
+        if (requestDto.getShareFlag() != null) {
+            boolean previousShareFlag = bucketList.isShareFlag();
+            bucketList.setShareFlag(requestDto.getShareFlag());
+            log.info("혼자/같이 진행 여부 수정: {} -> {}", previousShareFlag, requestDto.getShareFlag());
+            
+            // 같이 진행으로 변경된 경우, 선택된 멤버들과 공유
+            if (requestDto.getShareFlag() && !previousShareFlag) {
+                if (requestDto.getSelectedMemberIds() != null && !requestDto.getSelectedMemberIds().isEmpty()) {
+                    updateBucketListParticipants(bucketList, requestDto.getSelectedMemberIds());
+                }
+            }
+            // 혼자 진행으로 변경된 경우, 기존 참여자들 비활성화
+            else if (!requestDto.getShareFlag() && previousShareFlag) {
+                deactivateAllParticipants(bucketList);
+            }
+            // 이미 같이 진행 중이고 멤버 목록이 변경된 경우
+            else if (requestDto.getShareFlag() && previousShareFlag) {
+                if (requestDto.getSelectedMemberIds() != null) {
+                    updateBucketListParticipants(bucketList, requestDto.getSelectedMemberIds());
+                }
+            }
+        }
         
         BucketList savedBucketList = bucketListRepository.save(bucketList);
         log.info("버킷리스트 수정 완료: ID = {}", bucketListId);
@@ -281,6 +311,85 @@ public class BucketListServiceImpl implements BucketListService {
         }
         
         log.info("공동 버킷리스트 생성 완료");
+    }
+    
+    /**
+     * 버킷리스트 참여자 업데이트
+     */
+    @Transactional
+    private void updateBucketListParticipants(BucketList bucketList, List<Long> selectedMemberIds) {
+        log.info("버킷리스트 참여자 업데이트 - 버킷리스트 ID: {}, 선택된 멤버 수: {}", 
+                bucketList.getId(), selectedMemberIds.size());
+        
+        Member owner = bucketList.getMember();
+        Group ownerGroup = owner.getGroup();
+        
+        if (ownerGroup == null) {
+            throw new CustomException(ErrorCode.GROUP_NOT_FOUND);
+        }
+        
+        // 기존 참여자들을 모두 비활성화
+        List<BucketParticipant> existingParticipants = bucketParticipantRepository.findByBucketListAndIsActive(bucketList, true);
+        for (BucketParticipant participant : existingParticipants) {
+            participant.setIsActive(false);
+        }
+        bucketParticipantRepository.saveAll(existingParticipants);
+        
+        // 새로운 참여자들 추가
+        for (Long memberId : selectedMemberIds) {
+            // 본인은 제외
+            if (memberId.equals(owner.getId())) {
+                continue;
+            }
+            
+            // 멤버 조회 및 같은 그룹인지 확인
+            Member targetMember = memberRepository.findById(memberId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
+            
+            if (targetMember.getGroup() == null || !targetMember.getGroup().getId().equals(ownerGroup.getId())) {
+                log.warn("다른 그룹의 멤버이므로 제외: memberId = {}", memberId);
+                continue;
+            }
+            
+            // 기존에 이미 참여자였는지 확인
+            BucketParticipant existingParticipant = bucketParticipantRepository
+                    .findByBucketListAndMember(bucketList, targetMember)
+                    .orElse(null);
+            
+            if (existingParticipant != null) {
+                // 기존 참여자를 다시 활성화
+                existingParticipant.setIsActive(true);
+                bucketParticipantRepository.save(existingParticipant);
+            } else {
+                // 새로운 참여자 추가
+                BucketParticipant newParticipant = BucketParticipant.builder()
+                        .bucketList(bucketList)
+                        .member(targetMember)
+                        .isActive(true)
+                        .build();
+                bucketParticipantRepository.save(newParticipant);
+            }
+            
+            log.info("참여자 추가/활성화: 멤버 = {}", targetMember.getName());
+        }
+        
+        log.info("버킷리스트 참여자 업데이트 완료");
+    }
+    
+    /**
+     * 모든 참여자 비활성화 (혼자 진행으로 변경 시)
+     */
+    @Transactional
+    private void deactivateAllParticipants(BucketList bucketList) {
+        log.info("모든 참여자 비활성화 - 버킷리스트 ID: {}", bucketList.getId());
+        
+        List<BucketParticipant> participants = bucketParticipantRepository.findByBucketListAndIsActive(bucketList, true);
+        for (BucketParticipant participant : participants) {
+            participant.setIsActive(false);
+        }
+        bucketParticipantRepository.saveAll(participants);
+        
+        log.info("모든 참여자 비활성화 완료: {}명", participants.size());
     }
     
 }

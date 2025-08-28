@@ -9,6 +9,7 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @Setter
@@ -30,8 +31,16 @@ public class BucketListResponse {
     private BucketListStatus status; // 상태
     private LocalDateTime createdAt; // 생성일시
     private LocalDateTime updatedAt; // 수정일시
+    
+    private List<BucketListParticipantDto> participants; // 참여자 목록 (같이 진행하는 경우)
 
     public static BucketListResponse of(BucketList bucketList) {
+        // 참여자 목록 생성 (활성화된 참여자만)
+        List<BucketListParticipantDto> participants = bucketList.getParticipants().stream()
+                .filter(participant -> participant.getIsActive())
+                .map(BucketListParticipantDto::of)
+                .toList();
+        
         return BucketListResponse.builder()
                 .id(bucketList.getId())
                 .memberId(bucketList.getMember().getId())
@@ -44,6 +53,7 @@ public class BucketListResponse {
                 .status(bucketList.getStatus())
                 .createdAt(bucketList.getCreatedAt())
                 .updatedAt(bucketList.getUpdatedAt())
+                .participants(participants)
                 .build();
     }
 }

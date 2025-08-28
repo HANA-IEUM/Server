@@ -73,7 +73,7 @@ public class BucketListController {
         return ResponseEntity.ok(ApiResponse.ok());
     }
 
-    @Operation(summary = "버킷리스트 수정", description = "버킷리스트의 제목을 수정합니다.")
+    @Operation(summary = "버킷리스트 수정", description = "버킷리스트의 제목, 공개여부, 혼자/같이 진행 여부, 그룹원 선택을 수정합니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "버킷리스트 수정 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청 데이터 또는 이미 삭제된 버킷리스트"),
