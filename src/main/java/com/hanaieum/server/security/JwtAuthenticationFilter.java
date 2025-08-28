@@ -40,8 +40,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 path.startsWith("/v3/api-docs") ||
                 path.equals("/api/auth/register") ||
                 path.equals("/api/auth/login") ||
-                path.equals("/api/verification") ||
-                path.equals("/api/auth/refresh");
+                path.equals("/api/auth/refresh") ||
+                path.startsWith("/api/verification");
     }
 
     @Override
