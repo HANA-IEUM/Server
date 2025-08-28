@@ -45,7 +45,8 @@ public class Account extends BaseEntity {
     @Builder.Default
     private boolean deleted = false;
 
-    @Column(length = 50)
-    private String nickname;
+    public void updateBalance(Long balance) {
+        this.balance = balance;
+    }
 
 }

@@ -31,12 +31,14 @@ public class JwtTokenProvider {
     }
 
     // Access Token 발급
-    public String generateAccessToken(Long memberId) {
+    public String generateAccessToken(Long memberId, String name, String phoneNumber) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + accessTokenValidityInMilliseconds);
 
         return Jwts.builder()
                 .subject(memberId.toString()) // subject = memberId (PK)
+                .claim("name", name)
+                .claim("phoneNumber", phoneNumber)
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(secretKey)
