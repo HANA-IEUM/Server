@@ -26,9 +26,9 @@ public class BucketListController {
 
     private final BucketListService bucketListService;
 
-    @Operation(summary = "버킷리스트 생성", description = "사용자가 버킷리스트를 생성합니다.")
+    @Operation(summary = "버킷리스트 생성", description = "사용자가 버킷리스트를 생성합니다. createMoneyBox 옵션이 true인 경우 머니박스도 함께 생성됩니다.")
     @ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "버킷리스트 생성 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "버킷리스트 생성 성공 (머니박스 포함)"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청 데이터"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "회원을 찾을 수 없음")

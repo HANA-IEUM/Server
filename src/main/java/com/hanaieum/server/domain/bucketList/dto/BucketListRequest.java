@@ -39,4 +39,10 @@ public class BucketListRequest {
     
     // togetherFlag가 true일 때만 사용
     private List<Long> selectedMemberIds; // 함께할 그룹원들의 ID 목록
+    
+    // 머니박스 자동 생성 관련 필드
+    @Builder.Default
+    private Boolean createMoneyBox = true; // 머니박스 자동 생성 여부 (기본값: true)
+    
+    private String moneyBoxName; // 머니박스 이름 (null이면 버킷리스트 제목 사용)
 }

@@ -33,6 +33,9 @@ public class BucketListResponse {
     private LocalDateTime updatedAt; // 수정일시
     
     private List<BucketListParticipantDto> participants; // 참여자 목록 (같이 진행하는 경우)
+    
+    // 머니박스 정보 (기본 정보만)
+    private MoneyBoxInfo moneyBoxInfo;
 
     public static BucketListResponse of(BucketList bucketList) {
         // 참여자 목록 생성 (활성화된 참여자만)
@@ -55,5 +58,19 @@ public class BucketListResponse {
                 .updatedAt(bucketList.getUpdatedAt())
                 .participants(participants)
                 .build();
+    }
+    
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class MoneyBoxInfo {
+        private Long settingsId; // MoneyBoxSettings ID
+        private Long accountId; // Account ID  
+        private String boxName; // 머니박스 이름
+        private String accountNumber; // 계좌번호
+        private BigDecimal balance; // 잔액 (추후 Account에서 조회)
+        private boolean hasMoneyBox; // 머니박스 존재 여부
     }
 }

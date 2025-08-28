@@ -13,6 +13,7 @@ import com.hanaieum.server.domain.bucketList.repository.BucketParticipantReposit
 import com.hanaieum.server.domain.group.entity.Group;
 import com.hanaieum.server.domain.member.entity.Member;
 import com.hanaieum.server.domain.member.repository.MemberRepository;
+import com.hanaieum.server.domain.moneyBox.service.MoneyBoxSettingsService;
 import com.hanaieum.server.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +34,7 @@ public class BucketListServiceImpl implements BucketListService {
     private final BucketListRepository bucketListRepository;
     private final BucketParticipantRepository bucketParticipantRepository;
     private final MemberRepository memberRepository;
+    private final MoneyBoxSettingsService moneyBoxSettingsService;
 
     @Override
     @Transactional
@@ -68,6 +70,22 @@ public class BucketListServiceImpl implements BucketListService {
         // 저장
         BucketList savedBucketList = bucketListRepository.save(bucketList);
         log.info("버킷리스트 생성 완료: ID = {}", savedBucketList.getId());
+
+        // 머니박스 자동 생성 (옵션이 true인 경우)
+        if (requestDto.getCreateMoneyBox() != null && requestDto.getCreateMoneyBox()) {
+            try {
+                moneyBoxSettingsService.createMoneyBoxForBucketList(
+                    savedBucketList, 
+                    member, 
+                    requestDto.getMoneyBoxName()
+                );
+                log.info("버킷리스트와 연동된 머니박스 생성 완료: bucketListId = {}", savedBucketList.getId());
+            } catch (Exception e) {
+                log.warn("머니박스 자동 생성 실패 (버킷리스트 생성은 완료됨): bucketListId = {}, error = {}", 
+                        savedBucketList.getId(), e.getMessage());
+                // 머니박스 생성 실패해도 버킷리스트 생성은 성공으로 처리
+            }
+        }
 
         // 공동 버킷리스트인 경우 선택된 멤버들에게도 동일한 버킷리스트 생성
         if (requestDto.getTogetherFlag() && requestDto.getSelectedMemberIds() != null && !requestDto.getSelectedMemberIds().isEmpty()) {
@@ -289,6 +307,21 @@ public class BucketListServiceImpl implements BucketListService {
                     .build();
             
             BucketList savedSharedBucketList = bucketListRepository.save(sharedBucketList);
+            
+            // 공동 버킷리스트에도 머니박스 자동 생성
+            try {
+                moneyBoxSettingsService.createMoneyBoxForBucketList(
+                    savedSharedBucketList, 
+                    targetMember, 
+                    null // 버킷리스트 제목 사용
+                );
+                log.info("공동 버킷리스트 머니박스 생성 완료: bucketListId = {}, memberId = {}", 
+                        savedSharedBucketList.getId(), targetMember.getId());
+            } catch (Exception e) {
+                log.warn("공동 버킷리스트 머니박스 자동 생성 실패: bucketListId = {}, memberId = {}, error = {}", 
+                        savedSharedBucketList.getId(), targetMember.getId(), e.getMessage());
+                // 머니박스 생성 실패해도 공동 버킷리스트 생성은 성공으로 처리
+            }
             
             // 원본 버킷리스트에 참여자로 등록 (양방향 연결)
             BucketParticipant originalParticipant = BucketParticipant.builder()
