@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "머니박스 설정 API", description = "머니박스 설정 관리 API")
+@Tag(name = "Money box API", description = "머니박스 관련 API")
 @Slf4j
 @RestController
 @RequestMapping("/api/money-box-settings")

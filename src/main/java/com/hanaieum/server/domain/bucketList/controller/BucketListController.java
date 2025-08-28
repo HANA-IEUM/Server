@@ -20,7 +20,7 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequestMapping("/api/bucket-lists")
-@Tag(name="버킷리스트 API", description = "사용자가 버킷리스트를 생성, 수정, 삭제")
+@Tag(name="Bucket list API", description = "버킷리스트 관련 API")
 @RequiredArgsConstructor
 public class BucketListController {
 

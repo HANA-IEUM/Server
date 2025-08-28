@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/verification")
-@Tag(name = "문자인증", description = "사용자가 등록한 전화번호를 통해 문자 인증을 진행합니다.")
+@Tag(name = "SMS verification API", description = "문자인증 관련 API")
 @RequiredArgsConstructor
 public class VerificationController {
     private final VerificationService verificationService;
