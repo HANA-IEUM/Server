@@ -50,6 +50,12 @@ public enum ErrorCode {
     MONEY_BOX_SETTINGS_NOT_FOUND("MONEY_BOX_001", "머니박스 설정을 찾을 수 없습니다", HttpStatus.NOT_FOUND),
     MONEY_BOX_SETTINGS_ALREADY_EXISTS("MONEY_BOX_002", "해당 계좌에 대한 머니박스 설정이 이미 존재합니다", HttpStatus.CONFLICT),
 
+    // 자동이체 관련 에러
+    AUTO_TRANSFER_SCHEDULE_NOT_FOUND("AUTO_TRANSFER_001", "자동이체 스케줄을 찾을 수 없습니다", HttpStatus.NOT_FOUND),
+    AUTO_TRANSFER_SCHEDULE_ALREADY_EXISTS("AUTO_TRANSFER_002", "이미 동일한 자동이체 스케줄이 존재합니다", HttpStatus.CONFLICT),
+    AUTO_TRANSFER_INVALID_AMOUNT("AUTO_TRANSFER_003", "자동이체 금액이 올바르지 않습니다", HttpStatus.BAD_REQUEST),
+    AUTO_TRANSFER_INVALID_DAY("AUTO_TRANSFER_004", "자동이체일이 올바르지 않습니다", HttpStatus.BAD_REQUEST),
+
     // 입력값 검증 에러
     INVALID_INPUT_VALUE("VALIDATION_001", "입력값이 올바르지 않습니다", HttpStatus.BAD_REQUEST),
 

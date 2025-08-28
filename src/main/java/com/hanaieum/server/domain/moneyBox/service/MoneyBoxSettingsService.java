@@ -5,6 +5,7 @@ import com.hanaieum.server.domain.member.entity.Member;
 import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxSettingsRequest;
 import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxSettingsResponse;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public interface MoneyBoxSettingsService {

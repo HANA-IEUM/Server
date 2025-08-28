@@ -51,7 +51,7 @@ public class MoneyBoxSettingsController {
                 .body(ApiResponse.created(response));
     }
     
-    @Operation(summary = "머니박스 별명 수정", description = "머니박스의 별명을 수정합니다. 연결된 계좌 이름도 함께 변경됩니다.")
+    @Operation(summary = "머니박스 설정 수정", description = "머니박스의 별명, 월 납입금액, 자동이체 설정을 수정합니다. 연결된 계좌 이름도 함께 변경됩니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "머니박스 설정 수정 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청 데이터"),

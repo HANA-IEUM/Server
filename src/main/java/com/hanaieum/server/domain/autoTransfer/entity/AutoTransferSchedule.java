@@ -38,7 +38,7 @@ public class AutoTransferSchedule extends BaseEntity {
     
     @Column(name = "is_active", nullable = false)
     @Builder.Default
-    private Boolean active = true; // 활성화/비활성화
+    private Boolean active = true; // 활성화 여부
     
     @Column(name = "is_deleted", nullable = false)
     @Builder.Default

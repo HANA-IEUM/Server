@@ -3,8 +3,11 @@ package com.hanaieum.server.domain.moneyBox.service;
 import com.hanaieum.server.common.exception.CustomException;
 import com.hanaieum.server.common.exception.ErrorCode;
 import com.hanaieum.server.domain.account.entity.Account;
+import com.hanaieum.server.domain.account.entity.AccountType;
 import com.hanaieum.server.domain.account.repository.AccountRepository;
 import com.hanaieum.server.domain.account.service.AccountService;
+import com.hanaieum.server.domain.autoTransfer.entity.AutoTransferSchedule;
+import com.hanaieum.server.domain.autoTransfer.repository.AutoTransferScheduleRepository;
 import com.hanaieum.server.domain.bucketList.entity.BucketList;
 import com.hanaieum.server.domain.bucketList.repository.BucketListRepository;
 import com.hanaieum.server.domain.member.entity.Member;
@@ -22,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -34,6 +38,7 @@ public class MoneyBoxSettingsServiceImpl implements MoneyBoxSettingsService {
     private final BucketListRepository bucketListRepository;
     private final MemberRepository memberRepository;
     private final AccountService accountService;
+    private final AutoTransferScheduleRepository autoTransferScheduleRepository;
 
     private Member getCurrentMember() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -127,7 +132,9 @@ public class MoneyBoxSettingsServiceImpl implements MoneyBoxSettingsService {
     @Override
     @Transactional
     public MoneyBoxSettingsResponse updateMoneyBoxSettings(Long settingsId, MoneyBoxSettingsRequest request) {
-        log.info("머니박스 설정 수정 요청: settingsId = {}, boxName = {}", settingsId, request.getBoxName());
+        log.info("머니박스 설정 수정 요청: settingsId = {}, boxName = {}, autoTransferEnabled = {}, monthlyAmount = {}, transferDay = {}", 
+                settingsId, request.getBoxName(), request.getAutoTransferEnabled(), 
+                request.getMonthlyPaymentAmount(), request.getAutoTransferDay());
 
         Member currentMember = getCurrentMember();
 
@@ -141,18 +148,23 @@ public class MoneyBoxSettingsServiceImpl implements MoneyBoxSettingsService {
         }
 
         // 머니박스 별명 수정 및 연결된 계좌 정보 업데이트
-        String newBoxName = request.getBoxName();
+        if (request.getBoxName() != null) {
+            String newBoxName = request.getBoxName();
+            
+            // MoneyBoxSettings의 별명 수정
+            settings.setBoxName(newBoxName);
 
-        // MoneyBoxSettings의 별명 수정
-        settings.setBoxName(newBoxName);
+            // 연결된 Account의 이름 수정
+            Account account = settings.getAccount();
+            account.setName(newBoxName);      // 계좌명 변경
+            accountRepository.save(account);
+        }
 
-        // 연결된 Account의 이름과 닉네임도 함께 수정
-        Account account = settings.getAccount();
-        account.setName(newBoxName);      // 계좌명 변경
-        accountRepository.save(account);
+        // 자동이체 설정 수정
+        updateAutoTransferSettings(currentMember, settings.getAccount(), request);
 
         MoneyBoxSettings updatedSettings = moneyBoxSettingsRepository.save(settings);
-        log.info("머니박스 설정 수정 완료: ID = {}, 새 이름 = {}", settingsId, newBoxName);
+        log.info("머니박스 설정 수정 완료: ID = {}, 새 이름 = {}", settingsId, request.getBoxName());
 
         return MoneyBoxSettingsResponse.of(updatedSettings);
     }
@@ -172,6 +184,9 @@ public class MoneyBoxSettingsServiceImpl implements MoneyBoxSettingsService {
         if (!settings.getAccount().getMember().getId().equals(currentMember.getId())) {
             throw new CustomException(ErrorCode.FORBIDDEN);
         }
+
+        // 관련된 자동이체 스케줄도 함께 삭제
+        deleteRelatedAutoTransferSchedules(currentMember, settings.getAccount());
 
         // 계좌와 설정 모두 소프트 삭제
         Account account = settings.getAccount();
@@ -200,6 +215,110 @@ public class MoneyBoxSettingsServiceImpl implements MoneyBoxSettingsService {
         log.info("내 머니박스 목록 조회 완료: {} 개", responses.size());
 
         return responses;
+    }
+
+    /**
+     * 자동이체 설정 수정
+     */
+    @Transactional
+    protected void updateAutoTransferSettings(Member member, Account toAccount, MoneyBoxSettingsRequest request) {
+        try {
+            log.info("자동이체 설정 수정 시작: memberId = {}, toAccountId = {}, enabled = {}", 
+                    member.getId(), toAccount.getId(), request.getAutoTransferEnabled());
+            
+            // 주계좌 조회 (출금 계좌)
+            Account fromAccount = accountRepository.findByMemberAndAccountTypeAndDeletedFalse(
+                    member, AccountType.MAIN)
+                    .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
+            
+            // 기존 자동이체 스케줄 조회
+            Optional<AutoTransferSchedule> existingSchedule = autoTransferScheduleRepository
+                    .findByFromAccountAndToAccountAndActiveTrueAndDeletedFalse(fromAccount, toAccount);
+            
+            // 자동이체 비활성화 요청인 경우
+            if (request.getAutoTransferEnabled() != null && !request.getAutoTransferEnabled()) {
+                if (existingSchedule.isPresent()) {
+                    AutoTransferSchedule schedule = existingSchedule.get();
+                    schedule.setActive(false);
+                    autoTransferScheduleRepository.save(schedule);
+                    log.info("자동이체 스케줄 비활성화: scheduleId = {}", schedule.getId());
+                }
+                return;
+            }
+            
+            // 자동이체 활성화 요청인 경우
+            if (request.getAutoTransferEnabled() != null && request.getAutoTransferEnabled()) {
+                // 필수 파라미터 검증
+                if (request.getMonthlyPaymentAmount() == null || request.getAutoTransferDay() == null) {
+                    throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+                }
+                
+                if (existingSchedule.isPresent()) {
+                    // 기존 스케줄 수정
+                    AutoTransferSchedule schedule = existingSchedule.get();
+                    schedule.setAmount(request.getMonthlyPaymentAmount());
+                    schedule.setTransferDay(request.getAutoTransferDay());
+                    schedule.setActive(true);
+                    autoTransferScheduleRepository.save(schedule);
+                    log.info("자동이체 스케줄 수정: scheduleId = {}, amount = {}, transferDay = {}", 
+                            schedule.getId(), request.getMonthlyPaymentAmount(), request.getAutoTransferDay());
+                } else {
+                    // 새로운 스케줄 생성
+                    AutoTransferSchedule newSchedule = AutoTransferSchedule.builder()
+                            .fromAccount(fromAccount)
+                            .toAccount(toAccount)
+                            .amount(request.getMonthlyPaymentAmount())
+                            .transferDay(request.getAutoTransferDay())
+                            .active(true)
+                            .deleted(false)
+                            .build();
+                    autoTransferScheduleRepository.save(newSchedule);
+                    log.info("새 자동이체 스케줄 생성: scheduleId = {}, amount = {}, transferDay = {}", 
+                            newSchedule.getId(), request.getMonthlyPaymentAmount(), request.getAutoTransferDay());
+                }
+            }
+            
+        } catch (Exception e) {
+            log.warn("자동이체 설정 수정 실패: memberId = {}, toAccountId = {}, error = {}", 
+                    member.getId(), toAccount.getId(), e.getMessage());
+            throw e; // 자동이체 설정 수정 실패 시 전체 트랜잭션 롤백
+        }
+    }
+    
+    /**
+     * 관련된 자동이체 스케줄 삭제
+     */
+    @Transactional
+    protected void deleteRelatedAutoTransferSchedules(Member member, Account toAccount) {
+        try {
+            log.info("관련 자동이체 스케줄 삭제 시작: memberId = {}, toAccountId = {}", 
+                    member.getId(), toAccount.getId());
+            
+            // 주계좌 조회 (출금 계좌)
+            Account fromAccount = accountRepository.findByMemberAndAccountTypeAndDeletedFalse(
+                    member, AccountType.MAIN)
+                    .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
+            
+            // 기존 자동이체 스케줄 조회 및 삭제
+            Optional<AutoTransferSchedule> existingSchedule = autoTransferScheduleRepository
+                    .findByFromAccountAndToAccountAndActiveTrueAndDeletedFalse(fromAccount, toAccount);
+            
+            if (existingSchedule.isPresent()) {
+                AutoTransferSchedule schedule = existingSchedule.get();
+                schedule.setDeleted(true);
+                schedule.setActive(false);
+                autoTransferScheduleRepository.save(schedule);
+                log.info("자동이체 스케줄 삭제 완료: scheduleId = {}", schedule.getId());
+            } else {
+                log.info("삭제할 자동이체 스케줄이 없습니다: memberId = {}, toAccountId = {}", 
+                        member.getId(), toAccount.getId());
+            }
+            
+        } catch (Exception e) {
+            log.warn("자동이체 스케줄 삭제 실패: memberId = {}, toAccountId = {}, error = {}", 
+                    member.getId(), toAccount.getId(), e.getMessage());
+            // 자동이체 스케줄 삭제 실패해도 머니박스 삭제는 계속 진행
+        }
     }
 
 }

@@ -23,6 +23,13 @@ public class MoneyBoxSettingsResponse {
     private String bucketListTitle; // 버킷리스트 제목
     private BigDecimal targetAmount; // 버킷리스트 목표금액
     private String boxName; // 머니박스 별명
+    
+    // 자동이체 설정
+    private BigDecimal monthlyPaymentAmount; // 월 납입 금액
+    private Boolean autoTransferEnabled; // 자동이체 활성화 여부
+    private Integer autoTransferDay; // 자동이체 날짜
+    private String sourceAccountNumber; // 출금 계좌번호
+    
     private LocalDateTime createdAt; // 생성일시
     private LocalDateTime updatedAt; // 수정일시
     
@@ -38,6 +45,10 @@ public class MoneyBoxSettingsResponse {
                 .bucketListTitle(settings.getBucketList().getTitle())
                 .targetAmount(settings.getBucketList().getTargetAmount())
                 .boxName(settings.getBoxName())
+                .monthlyPaymentAmount(settings.getMonthlyPaymentAmount())
+                .autoTransferEnabled(settings.getAutoTransferEnabled())
+                .autoTransferDay(settings.getAutoTransferDay())
+                .sourceAccountNumber(settings.getSourceAccountNumber())
                 .createdAt(settings.getCreatedAt())
                 .updatedAt(settings.getUpdatedAt())
                 .build();
