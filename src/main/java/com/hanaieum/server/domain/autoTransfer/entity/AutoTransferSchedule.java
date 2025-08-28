@@ -36,9 +36,6 @@ public class AutoTransferSchedule extends BaseEntity {
     @Column(name = "transfer_day", nullable = false)
     private Integer transferDay; // 이체일(매월)
     
-    @Column(name = "next_transfer_date")
-    private LocalDateTime nextTransferDate; // 다음 이체일
-    
     @Column(name = "is_active", nullable = false)
     @Builder.Default
     private Boolean active = true; // 활성화/비활성화
