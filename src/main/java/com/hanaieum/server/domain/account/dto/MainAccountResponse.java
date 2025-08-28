@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class MainAccountResponse {
+    private Long accountId;
     private String accountNumber;
     private String accountName;
     private String bankName;
@@ -19,6 +20,7 @@ public class MainAccountResponse {
     
     public static MainAccountResponse of(Account account) {
         return MainAccountResponse.builder()
+                .accountId(account.getId())
                 .accountNumber(account.getNumber())
                 .accountName(account.getName())
                 .bankName(account.getBankName())
