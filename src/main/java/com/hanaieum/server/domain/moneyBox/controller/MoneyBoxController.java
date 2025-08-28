@@ -21,7 +21,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/money-box-settings")
 @RequiredArgsConstructor
-public class MoneyBoxSettingsController {
+public class MoneyBoxController {
     
     private final MoneyBoxSettingsService moneyBoxSettingsService;
     

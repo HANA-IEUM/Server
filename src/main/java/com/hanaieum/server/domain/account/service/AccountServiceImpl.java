@@ -82,18 +82,36 @@ public class AccountServiceImpl implements AccountService {
     }
     
     @Override
-    public Long createMoneyBoxAccount(Long memberId, String accountName) {
+    public Account createMoneyBoxAccount(Long memberId, String boxName) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
         
-        // 독립 실행용 - 잔액 0원, 비밀번호 1234
-        return createAccount(member, accountName, "하나은행", AccountType.MONEY_BOX, 0L, "1234");
+        return createMoneyBoxAccount(member, boxName);
     }
     
     @Override
-    public Long createMoneyBoxAccount(Member member, String accountName) {
-        // 연계 실행용 - 잔액 0원, 비밀번호 1234 
-        return createAccount(member, accountName, "하나은행", AccountType.MONEY_BOX, 0L, "1234");
+    public Account createMoneyBoxAccount(Member member, String boxName) {
+        // 머니박스 계좌 생성 - 잔액 0원, 비밀번호 1234
+        String accountNumber = generateUniqueAccountNumber(AccountType.MONEY_BOX);
+        String encodedAccountPassword = passwordEncoder.encode("1234");
+        
+        Account account = Account.builder()
+                .member(member)
+                .number(accountNumber)
+                .name("하나머니박스")
+                .bankName("하나은행")
+                .password(encodedAccountPassword)
+                .balance(0L)
+                .accountType(AccountType.MONEY_BOX)
+                .boxName(boxName)
+                .deleted(false)
+                .build();
+                
+        Account savedAccount = accountRepository.save(account);
+        log.info("머니박스 계좌 생성 완료 - 회원 ID: {}, 계좌번호: {}, 박스명: {}", 
+                member.getId(), accountNumber, boxName);
+        
+        return savedAccount;
     }
 
     // AccountType.MAIN (주계좌) : 14자리 숫자 (XXX-ZZZZZZ-ZZCYY)

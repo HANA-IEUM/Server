@@ -2,6 +2,7 @@ package com.hanaieum.server.domain.account.entity;
 
 import com.hanaieum.server.common.entity.BaseEntity;
 import com.hanaieum.server.domain.member.entity.Member;
+import com.hanaieum.server.domain.bucketList.entity.BucketList;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -44,6 +45,12 @@ public class Account extends BaseEntity {
     @Column(name = "is_deleted", nullable = false)
     @Builder.Default
     private boolean deleted = false;
+
+    @Column(name = "box_name", length = 100)
+    private String boxName;
+
+    @OneToOne(mappedBy = "moneyBoxAccount", fetch = FetchType.LAZY)
+    private BucketList bucketList;
 
     public void updateBalance(Long balance) {
         this.balance = balance;
