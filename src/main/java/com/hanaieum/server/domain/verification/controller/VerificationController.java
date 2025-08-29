@@ -18,11 +18,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/verification")
-@Tag(name = "문자인증", description = "사용자가 등록한 전화번호를 통해 문자 인증을 진행합니다.")
+@Tag(name = "SMS verification API", description = "문자인증 관련 API")
 @RequiredArgsConstructor
 public class VerificationController {
     private final VerificationService verificationService;
-
 
     @Operation(summary = "문자 인증번호 전송", description = "입력한 전화번호로 6자리 인증번호를 발송합니다.")
     @ApiResponses({
@@ -36,7 +35,7 @@ public class VerificationController {
         return ResponseEntity.ok(ApiResponse.of(HttpStatus.OK, "인증번호가 발송되었습니다.", null));
     }
 
-    @Operation(summary = "인증번호 검증", description = "발송된 인증번호를 확인합니다. 인증번호는 5분간 유효합니다.")
+    @Operation(summary = "인증번호 검증", description = "발송된 인증번호를 확인합니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "인증번호 확인 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 인증번호"),

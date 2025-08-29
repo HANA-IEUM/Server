@@ -43,7 +43,7 @@ public class SecurityConfig {
                                 "/api/auth/login",       // 로그인
                                 "/api/auth/refresh",     // 토큰 갱신
                                 "/api/auth/verify",      // 인증번호 확인
-                                "/api/verification/**",  // 문자인증
+                                "/api/verification/**",  // 문자인증 (하위 경로 포함)
                                 "/swagger-ui/**",        // Swagger UI
                                 "/v3/api-docs/**"        // OpenAPI 문서
                         ).permitAll()                      // 인증 없이 접근 가능한 URL

@@ -33,4 +33,8 @@ public class ApiResponse<T> {
     public static ApiResponse<Void> ok() {
         return of(HttpStatus.OK, "요청이 성공적으로 처리되었습니다.", null);
     }
+    
+    public static <T> ApiResponse<T> created(T data) {
+        return of(HttpStatus.CREATED, "생성이 성공적으로 완료되었습니다.", data);
+    }
 }

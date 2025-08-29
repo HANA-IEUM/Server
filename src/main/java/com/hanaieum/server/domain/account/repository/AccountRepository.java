@@ -10,18 +10,16 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
-@Repository
 public interface AccountRepository extends JpaRepository<Account, Long> {
 
     boolean existsByNumber(String number);
     
     Optional<Account> findByMemberAndAccountTypeAndDeletedFalse(Member member, AccountType accountType);
 
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT a FROM Account a WHERE a.id = :id")
-    Optional<Account> findByIdWithLock(@Param("id") Long id);
+    List<Account> findAllByMemberAndAccountTypeAndDeletedFalse(Member member, AccountType accountType);
 
     Optional<Account> findByIdAndDeletedFalse(Long id);
 
