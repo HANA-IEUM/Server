@@ -3,6 +3,7 @@ package com.hanaieum.server.domain.bucketList.service;
 import com.hanaieum.server.domain.bucketList.dto.BucketListRequest;
 import com.hanaieum.server.domain.bucketList.dto.BucketListResponse;
 import com.hanaieum.server.domain.bucketList.dto.BucketListUpdateRequest;
+import com.hanaieum.server.domain.bucketList.dto.BucketListDetailResponse;
 
 import java.util.List;
 
@@ -20,4 +21,7 @@ public interface BucketListService {
     
     // 특정 그룹원의 특정 버킷리스트 상세 조회
     BucketListResponse getGroupMemberBucketList(Long bucketListId);
+    
+    // 본인의 버킷리스트 상세 조회
+    BucketListDetailResponse getBucketListDetail(Long bucketListId);
 }

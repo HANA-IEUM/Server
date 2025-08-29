@@ -22,6 +22,8 @@ public interface AccountService {
     
     // === 버킷리스트 연동 머니박스 생성 메서드 ===
     Account createMoneyBoxForBucketList(BucketList bucketList, Member member, String boxName);
+    Account createMoneyBoxForBucketList(BucketList bucketList, Member member, String boxName, 
+                                        Boolean enableAutoTransfer, BigDecimal monthlyAmount, Integer transferDay);
 
     // === 계좌 조회 메서드 ===
     MainAccountResponse getMainAccount(Member member);

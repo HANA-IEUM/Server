@@ -53,6 +53,12 @@ public enum ErrorCode {
     INVALID_SUPPORT_AMOUNT("SUPPORT_002", "후원 금액이 유효하지 않습니다", HttpStatus.BAD_REQUEST),
     ACCOUNT_PASSWORD_REQUIRED("SUPPORT_003", "후원 시 계좌 비밀번호가 필요합니다", HttpStatus.BAD_REQUEST),
 
+    // 자동이체 관련 에러
+    AUTO_TRANSFER_SCHEDULE_NOT_FOUND("AUTO_TRANSFER_001", "자동이체 스케줄을 찾을 수 없습니다", HttpStatus.NOT_FOUND),
+    AUTO_TRANSFER_SCHEDULE_ALREADY_EXISTS("AUTO_TRANSFER_002", "이미 동일한 자동이체 스케줄이 존재합니다", HttpStatus.CONFLICT),
+    AUTO_TRANSFER_INVALID_AMOUNT("AUTO_TRANSFER_003", "자동이체 금액이 올바르지 않습니다", HttpStatus.BAD_REQUEST),
+    AUTO_TRANSFER_INVALID_DAY("AUTO_TRANSFER_004", "자동이체일이 올바르지 않습니다", HttpStatus.BAD_REQUEST),
+
     // 입력값 검증 에러
     INVALID_INPUT_VALUE("VALIDATION_001", "입력값이 올바르지 않습니다", HttpStatus.BAD_REQUEST),
 

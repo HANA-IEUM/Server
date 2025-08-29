@@ -6,13 +6,13 @@ import com.hanaieum.server.domain.account.dto.MainAccountResponse;
 import com.hanaieum.server.domain.account.entity.Account;
 import com.hanaieum.server.domain.account.entity.AccountType;
 import com.hanaieum.server.domain.account.repository.AccountRepository;
+import com.hanaieum.server.domain.autoTransfer.entity.AutoTransferSchedule;
+import com.hanaieum.server.domain.autoTransfer.repository.AutoTransferScheduleRepository;
 import com.hanaieum.server.domain.member.entity.Member;
 import com.hanaieum.server.domain.member.repository.MemberRepository;
 import com.hanaieum.server.domain.bucketList.entity.BucketList;
-import jakarta.persistence.LockModeType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.jpa.repository.Lock;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +31,7 @@ public class AccountServiceImpl implements AccountService {
     private final AccountRepository accountRepository;
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AutoTransferScheduleRepository autoTransferScheduleRepository;
     
     @Override
     public Long createAccount(Member member, String accountName, String bankName, AccountType accountType, Long balance, String password) {
@@ -117,10 +118,56 @@ public class AccountServiceImpl implements AccountService {
         
         // BucketList와 Account 양방향 연결
         bucketList.setMoneyBoxAccount(account);
-        // account.setBucketList(bucketList); // 이미 OneToOne mappedBy로 자동 설정됨
         
         log.info("버킷리스트 연동 머니박스 생성 완료 - 버킷리스트 ID: {}, 계좌 ID: {}, 박스명: {}", 
                 bucketList.getId(), account.getId(), finalBoxName);
+        
+        return account;
+    }
+    
+    @Override
+    public Account createMoneyBoxForBucketList(BucketList bucketList, Member member, String boxName, 
+                                               Boolean enableAutoTransfer, BigDecimal monthlyAmount, Integer transferDay) {
+        // boxName이 없으면 버킷리스트 제목 사용
+        String finalBoxName = (boxName != null && !boxName.trim().isEmpty()) ? boxName : bucketList.getTitle();
+        
+        // 머니박스 계좌 생성
+        Account account = createMoneyBoxAccount(member, finalBoxName);
+        
+        // BucketList와 Account 양방향 연결
+        bucketList.setMoneyBoxAccount(account);
+        
+        // 자동이체 활성화된 경우 스케줄 생성
+        if (Boolean.TRUE.equals(enableAutoTransfer) && monthlyAmount != null && transferDay != null) {
+            try {
+                // 사용자의 주계좌 조회 (출금 계좌로 사용)
+                Account mainAccount = accountRepository.findByMemberAndAccountTypeAndDeletedFalse(member, AccountType.MAIN)
+                        .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
+                
+                // 자동이체 스케줄 생성
+                AutoTransferSchedule autoTransferSchedule = AutoTransferSchedule.builder()
+                        .fromAccount(mainAccount)
+                        .toAccount(account)
+                        .amount(monthlyAmount)
+                        .transferDay(transferDay)
+                        .active(true)
+                        .deleted(false)
+                        .build();
+                
+                autoTransferScheduleRepository.save(autoTransferSchedule);
+                
+                log.info("버킷리스트 머니박스 자동이체 스케줄 생성 완료 - 버킷리스트 ID: {}, 계좌 ID: {}, 월 납입금: {}, 이체일: {}일", 
+                        bucketList.getId(), account.getId(), monthlyAmount, transferDay);
+                        
+            } catch (Exception e) {
+                log.warn("자동이체 스케줄 생성 실패 (머니박스 생성은 완료됨) - 버킷리스트 ID: {}, error: {}", 
+                        bucketList.getId(), e.getMessage());
+                // 자동이체 스케줄 생성 실패해도 머니박스 생성은 성공으로 처리
+            }
+        }
+        
+        log.info("버킷리스트 연동 머니박스 생성 완료 - 버킷리스트 ID: {}, 계좌 ID: {}, 박스명: {}, 자동이체: {}", 
+                bucketList.getId(), account.getId(), finalBoxName, enableAutoTransfer);
         
         return account;
     }
