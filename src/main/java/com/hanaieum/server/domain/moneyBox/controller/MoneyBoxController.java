@@ -24,7 +24,9 @@ public class MoneyBoxController {
     
     private final MoneyBoxService moneyBoxService;
     
-    @Operation(summary = "머니박스 별명 수정", description = "머니박스의 별명을 수정합니다. 연결된 계좌 이름도 함께 변경됩니다.")
+    @Operation(summary = "머니박스 정보 수정", 
+               description = "머니박스의 별명, 월 납입금액, 자동이체 날짜를 수정합니다. " +
+                           "연결된 계좌 이름도 함께 변경되며, 자동이체 스케줄이 있는 경우 함께 업데이트됩니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "머니박스 설정 수정 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청 데이터"),
@@ -36,7 +38,8 @@ public class MoneyBoxController {
     public ResponseEntity<ApiResponse<MoneyBoxResponse>> updateMoneyBoxName(
             @PathVariable Long accountId,
             @Valid @RequestBody MoneyBoxRequest request) {
-        log.info("머니박스 별명 수정 API 호출: accountId = {}, boxName = {}", accountId, request.getBoxName());
+        log.info("머니박스 정보 수정 API 호출: accountId = {}, boxName = {}, monthlyAmount = {}, transferDay = {}", 
+                accountId, request.getBoxName(), request.getMonthlyAmount(), request.getTransferDay());
         
         MoneyBoxResponse response = moneyBoxService.updateMoneyBoxName(accountId, request);
         

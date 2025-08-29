@@ -13,7 +13,7 @@ spring:
     password: ${DB_PASSWORD}
   jpa:
     hibernate:
-      ddl-auto: create-drop # create-drop, update
+      ddl-auto: update # create-drop, update
     properties:
       hibernate:
         show_sql: true

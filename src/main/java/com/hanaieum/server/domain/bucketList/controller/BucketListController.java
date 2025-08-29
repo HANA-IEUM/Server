@@ -4,6 +4,7 @@ import com.hanaieum.server.common.dto.ApiResponse;
 import com.hanaieum.server.domain.bucketList.dto.BucketListRequest;
 import com.hanaieum.server.domain.bucketList.dto.BucketListResponse;
 import com.hanaieum.server.domain.bucketList.dto.BucketListUpdateRequest;
+import com.hanaieum.server.domain.bucketList.dto.BucketListDetailResponse;
 import com.hanaieum.server.domain.bucketList.service.BucketListService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -116,6 +117,22 @@ public class BucketListController {
         log.info("그룹원의 특정 버킷리스트 상세 조회 API 호출: {}", bucketListId);
         
         BucketListResponse response = bucketListService.getGroupMemberBucketList(bucketListId);
+        
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    @Operation(summary = "버킷리스트 상세 조회", description = "지정된 버킷리스트의 상세 정보를 조회합니다. 버킷리스트 이름, 목표금액, 목표기간 종료날짜 등을 포함합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "버킷리스트 상세 조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "접근 권한 없음"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "버킷리스트를 찾을 수 없음")
+    })
+    @GetMapping("/{bucketListId}")
+    public ResponseEntity<ApiResponse<BucketListDetailResponse>> getBucketListDetail(@PathVariable Long bucketListId) {
+        log.info("버킷리스트 상세 조회 API 호출: {}", bucketListId);
+        
+        BucketListDetailResponse response = bucketListService.getBucketListDetail(bucketListId);
         
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
