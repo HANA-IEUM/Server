@@ -17,6 +17,8 @@ import com.hanaieum.server.domain.moneyBox.service.MoneyBoxSettingsService;
 import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxSettingsResponse;
 import com.hanaieum.server.domain.account.service.AccountService;
 import com.hanaieum.server.domain.account.entity.Account;
+import com.hanaieum.server.domain.account.entity.AccountType;
+import com.hanaieum.server.domain.account.repository.AccountRepository;
 import com.hanaieum.server.domain.autoTransfer.entity.AutoTransferSchedule;
 import com.hanaieum.server.domain.autoTransfer.repository.AutoTransferScheduleRepository;
 import com.hanaieum.server.security.CustomUserDetails;
@@ -42,6 +44,7 @@ public class BucketListServiceImpl implements BucketListService {
     private final MemberRepository memberRepository;
     private final MoneyBoxSettingsService moneyBoxSettingsService;
     private final AccountService accountService;
+    private final AccountRepository accountRepository;
     private final AutoTransferScheduleRepository autoTransferScheduleRepository;
 
     @Override
@@ -457,9 +460,12 @@ public class BucketListServiceImpl implements BucketListService {
                     member.getId(), toAccountId, monthlyAmount, transferDay);
             
             // 주계좌 조회 (출금 계좌)
-            Account fromAccount = accountService.findById(
-                accountService.getMainAccount(member).getAccountId()
-            );
+            Account fromAccount = accountRepository.findByMemberAndAccountTypeAndDeletedFalse(member, AccountType.MAIN)
+                    .orElseGet(() -> {
+                        log.warn("주계좌가 존재하지 않아 자동 생성합니다: memberId = {}", member.getId());
+                        Long mainAccountId = accountService.createMainAccount(member);
+                        return accountService.findById(mainAccountId);
+                    });
             
             // 머니박스 계좌 조회 (입금 계좌)
             Account toAccount = accountService.findById(toAccountId);
@@ -483,5 +489,4 @@ public class BucketListServiceImpl implements BucketListService {
             // 자동이체 스케줄 생성 실패해도 전체 프로세스는 계속 진행
         }
     }
-    
 }
