@@ -8,6 +8,7 @@ import com.hanaieum.server.domain.account.entity.AccountType;
 import com.hanaieum.server.domain.account.repository.AccountRepository;
 import com.hanaieum.server.domain.member.entity.Member;
 import com.hanaieum.server.domain.member.repository.MemberRepository;
+import com.hanaieum.server.domain.bucketList.entity.BucketList;
 import jakarta.persistence.LockModeType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -82,14 +83,6 @@ public class AccountServiceImpl implements AccountService {
     }
     
     @Override
-    public Account createMoneyBoxAccount(Long memberId, String boxName) {
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
-        
-        return createMoneyBoxAccount(member, boxName);
-    }
-    
-    @Override
     public Account createMoneyBoxAccount(Member member, String boxName) {
         // 머니박스 계좌 생성 - 잔액 0원, 비밀번호 1234
         String accountNumber = generateUniqueAccountNumber(AccountType.MONEY_BOX);
@@ -112,6 +105,24 @@ public class AccountServiceImpl implements AccountService {
                 member.getId(), accountNumber, boxName);
         
         return savedAccount;
+    }
+    
+    @Override
+    public Account createMoneyBoxForBucketList(BucketList bucketList, Member member, String boxName) {
+        // boxName이 없으면 버킷리스트 제목 사용
+        String finalBoxName = (boxName != null && !boxName.trim().isEmpty()) ? boxName : bucketList.getTitle();
+        
+        // 머니박스 계좌 생성
+        Account account = createMoneyBoxAccount(member, finalBoxName);
+        
+        // BucketList와 Account 양방향 연결
+        bucketList.setMoneyBoxAccount(account);
+        // account.setBucketList(bucketList); // 이미 OneToOne mappedBy로 자동 설정됨
+        
+        log.info("버킷리스트 연동 머니박스 생성 완료 - 버킷리스트 ID: {}, 계좌 ID: {}, 박스명: {}", 
+                bucketList.getId(), account.getId(), finalBoxName);
+        
+        return account;
     }
 
     // AccountType.MAIN (주계좌) : 14자리 숫자 (XXX-ZZZZZZ-ZZCYY)

@@ -13,7 +13,7 @@ import com.hanaieum.server.domain.bucketList.repository.BucketParticipantReposit
 import com.hanaieum.server.domain.group.entity.Group;
 import com.hanaieum.server.domain.member.entity.Member;
 import com.hanaieum.server.domain.member.repository.MemberRepository;
-import com.hanaieum.server.domain.moneyBox.service.MoneyBoxSettingsService;
+import com.hanaieum.server.domain.account.service.AccountService;
 import com.hanaieum.server.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +34,7 @@ public class BucketListServiceImpl implements BucketListService {
     private final BucketListRepository bucketListRepository;
     private final BucketParticipantRepository bucketParticipantRepository;
     private final MemberRepository memberRepository;
-    private final MoneyBoxSettingsService moneyBoxSettingsService;
+    private final AccountService accountService;
 
     @Override
     @Transactional
@@ -74,7 +74,7 @@ public class BucketListServiceImpl implements BucketListService {
         // 머니박스 자동 생성 (옵션이 true인 경우)
         if (requestDto.getCreateMoneyBox() != null && requestDto.getCreateMoneyBox()) {
             try {
-                moneyBoxSettingsService.createMoneyBoxForBucketList(
+                accountService.createMoneyBoxForBucketList(
                     savedBucketList, 
                     member, 
                     requestDto.getMoneyBoxName()
@@ -310,7 +310,7 @@ public class BucketListServiceImpl implements BucketListService {
             
             // 공동 버킷리스트에도 머니박스 자동 생성
             try {
-                moneyBoxSettingsService.createMoneyBoxForBucketList(
+                accountService.createMoneyBoxForBucketList(
                     savedSharedBucketList, 
                     targetMember, 
                     null // 버킷리스트 제목 사용

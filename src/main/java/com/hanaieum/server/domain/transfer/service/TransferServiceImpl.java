@@ -4,8 +4,6 @@ import com.hanaieum.server.domain.account.entity.Account;
 import com.hanaieum.server.domain.account.service.AccountService;
 import com.hanaieum.server.domain.bucketList.entity.BucketList;
 import com.hanaieum.server.domain.bucketList.repository.BucketListRepository;
-import com.hanaieum.server.domain.moneyBox.entity.MoneyBoxSettings;
-import com.hanaieum.server.domain.moneyBox.repository.MoneyBoxSettingsRepository;
 import com.hanaieum.server.domain.transaction.entity.ReferenceType;
 import com.hanaieum.server.domain.transaction.entity.TransactionType;
 import com.hanaieum.server.domain.transaction.service.TransactionService;
@@ -25,7 +23,6 @@ public class TransferServiceImpl implements TransferService {
     private final AccountService accountService;
     private final TransactionService transactionService;
     private final BucketListRepository bucketListRepository;
-    private final MoneyBoxSettingsRepository moneyBoxSettingsRepository;
 
     @Override
     public void fillMoneyBox(Long memberId, Long moneyBoxAccountId, BigDecimal amount, String password) {
@@ -110,12 +107,16 @@ public class TransferServiceImpl implements TransferService {
     }
 
     private Long getMoneyBoxAccountIdByBucketId(Long bucketId) {
-        // 1. 버킷리스트 조회 -> 머니박스 계좌 ID 조회 bucketList.getAccount().getId(); 반환
+        // 1. 버킷리스트 조회 -> 머니박스 계좌 ID 조회
         BucketList bucketList = bucketListRepository.findByIdAndDeletedFalse(bucketId)
                 .orElseThrow(() -> new RuntimeException("버킷리스트를 찾을 수 없습니다: " + bucketId));
         
-        // 2. 머니박스 계좌 ID 반환, bucketList.getAccount().getId(); 현재는 임시로 버킷리스트 id
-        Long accountId = bucketList.getId();
+        // 2. 버킷리스트에 연결된 머니박스 계좌 ID 반환
+        if (bucketList.getMoneyBoxAccount() == null) {
+            throw new RuntimeException("버킷리스트에 연결된 머니박스가 없습니다: " + bucketId);
+        }
+        
+        Long accountId = bucketList.getMoneyBoxAccount().getId();
         log.info("버킷리스트 {} → 머니박스 계좌 {} 매핑 완료", bucketId, accountId);
         
         return accountId;
