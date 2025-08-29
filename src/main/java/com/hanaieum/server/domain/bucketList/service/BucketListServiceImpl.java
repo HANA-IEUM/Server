@@ -74,12 +74,31 @@ public class BucketListServiceImpl implements BucketListService {
         // 머니박스 자동 생성 (옵션이 true인 경우)
         if (requestDto.getCreateMoneyBox() != null && requestDto.getCreateMoneyBox()) {
             try {
-                accountService.createMoneyBoxForBucketList(
-                    savedBucketList, 
-                    member, 
-                    requestDto.getMoneyBoxName()
-                );
-                log.info("버킷리스트와 연동된 머니박스 생성 완료: bucketListId = {}", savedBucketList.getId());
+                // 자동이체 정보가 있는 경우 자동이체 포함하여 생성
+                if (Boolean.TRUE.equals(requestDto.getEnableAutoTransfer()) && 
+                    requestDto.getMonthlyAmount() != null && 
+                    requestDto.getTransferDay() != null) {
+                    
+                    Integer transferDay = Integer.parseInt(requestDto.getTransferDay());
+                    accountService.createMoneyBoxForBucketList(
+                        savedBucketList, 
+                        member, 
+                        requestDto.getMoneyBoxName(),
+                        requestDto.getEnableAutoTransfer(),
+                        requestDto.getMonthlyAmount(),
+                        transferDay
+                    );
+                    log.info("버킷리스트와 연동된 머니박스 및 자동이체 생성 완료: bucketListId = {}, monthlyAmount = {}, transferDay = {}일", 
+                            savedBucketList.getId(), requestDto.getMonthlyAmount(), transferDay);
+                } else {
+                    // 기존 방식: 자동이체 없이 머니박스만 생성
+                    accountService.createMoneyBoxForBucketList(
+                        savedBucketList, 
+                        member, 
+                        requestDto.getMoneyBoxName()
+                    );
+                    log.info("버킷리스트와 연동된 머니박스 생성 완료: bucketListId = {}", savedBucketList.getId());
+                }
             } catch (Exception e) {
                 log.warn("머니박스 자동 생성 실패 (버킷리스트 생성은 완료됨): bucketListId = {}, error = {}", 
                         savedBucketList.getId(), e.getMessage());
@@ -89,7 +108,7 @@ public class BucketListServiceImpl implements BucketListService {
 
         // 공동 버킷리스트인 경우 선택된 멤버들에게도 동일한 버킷리스트 생성
         if (requestDto.getTogetherFlag() && requestDto.getSelectedMemberIds() != null && !requestDto.getSelectedMemberIds().isEmpty()) {
-            createSharedBucketLists(savedBucketList, requestDto.getSelectedMemberIds(), member);
+            createSharedBucketLists(savedBucketList, requestDto.getSelectedMemberIds(), member, requestDto);
         }
 
         return BucketListResponse.of(savedBucketList);
@@ -268,7 +287,7 @@ public class BucketListServiceImpl implements BucketListService {
      * 공동 버킷리스트 생성 - 선택된 멤버들에게 동일한 버킷리스트 생성
      */
     @Transactional
-    protected void createSharedBucketLists(BucketList originalBucketList, List<Long> selectedMemberIds, Member creator) {
+    protected void createSharedBucketLists(BucketList originalBucketList, List<Long> selectedMemberIds, Member creator, BucketListRequest requestDto) {
         log.info("공동 버킷리스트 생성 시작 - 원본 ID: {}, 대상 멤버 수: {}", 
                 originalBucketList.getId(), selectedMemberIds.size());
         
@@ -310,13 +329,32 @@ public class BucketListServiceImpl implements BucketListService {
             
             // 공동 버킷리스트에도 머니박스 자동 생성
             try {
-                accountService.createMoneyBoxForBucketList(
-                    savedSharedBucketList, 
-                    targetMember, 
-                    null // 버킷리스트 제목 사용
-                );
-                log.info("공동 버킷리스트 머니박스 생성 완료: bucketListId = {}, memberId = {}", 
-                        savedSharedBucketList.getId(), targetMember.getId());
+                // 자동이체 정보가 있는 경우 자동이체 포함하여 생성
+                if (Boolean.TRUE.equals(requestDto.getEnableAutoTransfer()) && 
+                    requestDto.getMonthlyAmount() != null && 
+                    requestDto.getTransferDay() != null) {
+                    
+                    Integer transferDay = Integer.parseInt(requestDto.getTransferDay());
+                    accountService.createMoneyBoxForBucketList(
+                        savedSharedBucketList, 
+                        targetMember, 
+                        null, // 버킷리스트 제목 사용
+                        requestDto.getEnableAutoTransfer(),
+                        requestDto.getMonthlyAmount(),
+                        transferDay
+                    );
+                    log.info("공동 버킷리스트 머니박스 및 자동이체 생성 완료: bucketListId = {}, memberId = {}, monthlyAmount = {}, transferDay = {}일", 
+                            savedSharedBucketList.getId(), targetMember.getId(), requestDto.getMonthlyAmount(), transferDay);
+                } else {
+                    // 기존 방식: 자동이체 없이 머니박스만 생성
+                    accountService.createMoneyBoxForBucketList(
+                        savedSharedBucketList, 
+                        targetMember, 
+                        null // 버킷리스트 제목 사용
+                    );
+                    log.info("공동 버킷리스트 머니박스 생성 완료: bucketListId = {}, memberId = {}", 
+                            savedSharedBucketList.getId(), targetMember.getId());
+                }
             } catch (Exception e) {
                 log.warn("공동 버킷리스트 머니박스 자동 생성 실패: bucketListId = {}, memberId = {}, error = {}", 
                         savedSharedBucketList.getId(), targetMember.getId(), e.getMessage());
