@@ -23,7 +23,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class VerificationController {
     private final VerificationService verificationService;
 
-
     @Operation(summary = "문자 인증번호 전송", description = "입력한 전화번호로 6자리 인증번호를 발송합니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "인증번호 발송 성공"),
