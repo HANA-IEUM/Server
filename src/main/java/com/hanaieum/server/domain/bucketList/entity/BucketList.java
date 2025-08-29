@@ -59,7 +59,7 @@ public class BucketList extends BaseEntity {
     private List<BucketParticipant> participants = new ArrayList<>();
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "money_box_account_id", nullable = false)
+    @JoinColumn(name = "money_box_account_id", nullable = true)
     private Account moneyBoxAccount;
 
 }

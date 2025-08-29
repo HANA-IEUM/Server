@@ -38,7 +38,7 @@ public class SupportRecord extends BaseEntity {
     @Builder.Default
     private BigDecimal supportAmount = BigDecimal.ZERO; // 후원금액 (응원시 0)
     
-    @Column(length = 500)
+    @Column(length = 200)
     private String message; // 응원메시지
     
     @Enumerated(EnumType.STRING)
