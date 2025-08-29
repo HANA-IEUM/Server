@@ -8,6 +8,9 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.UUID;
 
 @Service
 public class S3Service {
@@ -22,16 +25,20 @@ public class S3Service {
     }
 
     public String uploadFile(MultipartFile multipartFile) throws IOException {
-        String fileName = multipartFile.getOriginalFilename();
+
+        LocalDate today = LocalDate.now();
+        String datePath = today.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+
+        String uuid = UUID.randomUUID().toString();
+        String originalFilename = multipartFile.getOriginalFilename();
+        String fileName = datePath + "/" + uuid + "_" + originalFilename;
 
         s3Client.putObject(
                 PutObjectRequest.builder()
                         .bucket(bucketName)
                         .key(fileName)
-
                         .contentType(multipartFile.getContentType())
                         .contentDisposition("inline")
-
                         .build(),
                 RequestBody.fromInputStream(multipartFile.getInputStream(), multipartFile.getSize())
         );
