@@ -92,6 +92,11 @@ public class PhotoServiceImpl implements PhotoService {
         Photo photo = photoRepository.findById(photoId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PHOTO_NOT_FOUND));
 
+        Group uploaderGroup = photo.getUploader().getGroup();
+
+        if (!uploaderGroup.getId().equals(group.getId()))
+            throw new CustomException(ErrorCode.GROUP_FORBIDDEN);
+
         boolean isUploader = photo.getUploader().getId().equals(memberId);
 
         return PhotoResponse.builder()
@@ -111,17 +116,15 @@ public class PhotoServiceImpl implements PhotoService {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
 
-        Long groupId = member.getGroup().getId();
-        if (groupId == null) {
-            throw new CustomException(ErrorCode.GROUP_NOT_FOUND);
-        }
+        Group group = member.getGroup();
+        if (group == null) throw new CustomException(ErrorCode.GROUP_NOT_FOUND);
 
-        List<MemberInfoResponse> members = memberRepository.findAllByGroup_Id(groupId)
+        List<MemberInfoResponse> members = memberRepository.findAllByGroup_Id(group.getId())
                 .stream()
                 .map(m -> new MemberInfoResponse(m.getId(), m.getName()))
                 .collect(Collectors.toList());
 
-        List<PhotoResponse> photos = photoRepository.findAllByGroup_Id(groupId)
+        List<PhotoResponse> photos = photoRepository.findAllByGroup_Id(group.getId())
                 .stream()
                 .map(photo -> PhotoResponse.builder()
                         .photoId(photo.getId())
@@ -146,15 +149,21 @@ public class PhotoServiceImpl implements PhotoService {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
 
+        Group group = member.getGroup();
+        if (group == null)
+            throw new CustomException(ErrorCode.GROUP_NOT_FOUND);
+
         Member uploader = memberRepository.findById(uploaderId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
 
-        Long groupId = member.getGroup().getId();
-        if (groupId == null) {
+        Group uploaderGroup = uploader.getGroup();
+        if (uploaderGroup == null)
             throw new CustomException(ErrorCode.GROUP_NOT_FOUND);
-        }
 
-        List<MemberInfoResponse> members = memberRepository.findAllByGroup_Id(groupId)
+        if (!group.getId().equals(uploaderGroup.getId()))
+            throw new CustomException(ErrorCode.GROUP_FORBIDDEN);
+
+        List<MemberInfoResponse> members = memberRepository.findAllByGroup_Id(group.getId())
                 .stream()
                 .map(m -> new MemberInfoResponse(m.getId(), m.getName()))
                 .collect(Collectors.toList());
@@ -178,7 +187,7 @@ public class PhotoServiceImpl implements PhotoService {
     }
 
     @Override
-    public PhotoResponse updatePhoto(Long photoId,PhotoRequest photoUpdateRequest, Long memberId) {
+    public PhotoResponse updatePhoto(Long photoId, PhotoRequest photoUpdateRequest, Long memberId) {
 
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
@@ -190,7 +199,7 @@ public class PhotoServiceImpl implements PhotoService {
         Photo photo = photoRepository.findById(photoId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PHOTO_NOT_FOUND));
 
-        if (photo.getUploader().getId() != memberId)
+        if (!photo.getUploader().getId().equals(memberId))
             throw new CustomException(ErrorCode.PHOTO_FORBIDDEN);
 
         photo.setPhotoUrl(photoUpdateRequest.getImgUrl());
@@ -210,12 +219,19 @@ public class PhotoServiceImpl implements PhotoService {
     @Override
     public void deletePhoto(Long photoId, Long memberId) {
 
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
+
+        Group group = member.getGroup();
+        if (group == null)
+            throw new CustomException(ErrorCode.GROUP_NOT_FOUND);
+
         Photo photo = photoRepository.findById(photoId)
                 .orElseThrow(() -> new CustomException(ErrorCode.PHOTO_NOT_FOUND));
 
-        if (photo.getUploader().getId().equals(memberId)) {
-            photoRepository.deleteById(photoId);
+        if (!photo.getUploader().getId().equals(memberId)) {
+            throw new CustomException(ErrorCode.PHOTO_FORBIDDEN);
         }
-        else throw new CustomException(ErrorCode.PHOTO_FORBIDDEN);
+        photoRepository.deleteById(photoId);
     }
 }

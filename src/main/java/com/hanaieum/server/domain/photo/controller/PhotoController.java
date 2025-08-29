@@ -51,6 +51,7 @@ public class PhotoController {
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "게시물 생성 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 입력값"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "찾을 수 없음"),
     })
     @PostMapping
     public ResponseEntity<ApiResponse<PhotoResponse>> createPhoto(
@@ -64,6 +65,8 @@ public class PhotoController {
     @Operation(summary = "게시물 조회", description = "하나의 게시물을 조회합니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "게시물 조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "게시물 접근 권한이 없음"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "찾을 수 없음"),
     })
     @GetMapping("/{photoId}")
     public ResponseEntity<ApiResponse<PhotoResponse>> getPhoto(
@@ -77,6 +80,7 @@ public class PhotoController {
     @Operation(summary = "앨범 전체 조회", description = "사용자가 속한 그룹 앨범의 모든 게시물을 조회합니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "게시물 조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "찾을 수 없음"),
     })
     @GetMapping
     public ResponseEntity<ApiResponse<AlbumResponse>> getAlbum(
@@ -89,6 +93,8 @@ public class PhotoController {
     @Operation(summary = "멤버별 게시물 전체 조회", description = "특정 멤버의 모든 게시물을 조회합니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "멤버별 게시물 조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "게시물 접근 권한이 없음"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "찾을 수 없음"),
     })
     @GetMapping("/member/{memberId}")
     public ResponseEntity<ApiResponse<AlbumResponse>> getAlbumByUploader(
@@ -103,6 +109,8 @@ public class PhotoController {
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "게시물 수정 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 입력값"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "게시물 접근 권한이 없음"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "찾을 수 없음"),
     })
     @PutMapping("/{photoId}")
     public ResponseEntity<ApiResponse<PhotoResponse>> updatePhoto(
@@ -117,6 +125,8 @@ public class PhotoController {
     @Operation(summary = "게시물 삭제", description = "게시물을 삭제합니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "게시물 삭제 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "게시물 접근 권한이 없음"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "찾을 수 없음"),
     })
     @DeleteMapping("/{photoId}")
     public ResponseEntity<ApiResponse<Void>> deletePhoto(
