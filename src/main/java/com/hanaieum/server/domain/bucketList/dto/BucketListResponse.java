@@ -44,6 +44,22 @@ public class BucketListResponse {
                 .map(BucketListParticipantDto::of)
                 .toList();
         
+        // 머니박스 정보 생성
+        MoneyBoxInfo moneyBoxInfo = null;
+        if (bucketList.getMoneyBoxAccount() != null) {
+            moneyBoxInfo = MoneyBoxInfo.builder()
+                    .accountId(bucketList.getMoneyBoxAccount().getId())
+                    .boxName(bucketList.getMoneyBoxAccount().getBoxName())
+                    .accountNumber(bucketList.getMoneyBoxAccount().getNumber())
+                    .balance(BigDecimal.valueOf(bucketList.getMoneyBoxAccount().getBalance()))
+                    .hasMoneyBox(true)
+                    .build();
+        } else {
+            moneyBoxInfo = MoneyBoxInfo.builder()
+                    .hasMoneyBox(false)
+                    .build();
+        }
+        
         return BucketListResponse.builder()
                 .id(bucketList.getId())
                 .memberId(bucketList.getMember().getId())
@@ -57,6 +73,7 @@ public class BucketListResponse {
                 .createdAt(bucketList.getCreatedAt())
                 .updatedAt(bucketList.getUpdatedAt())
                 .participants(participants)
+                .moneyBoxInfo(moneyBoxInfo)
                 .build();
     }
     
@@ -66,11 +83,10 @@ public class BucketListResponse {
     @AllArgsConstructor
     @Builder
     public static class MoneyBoxInfo {
-        private Long settingsId; // MoneyBoxSettings ID
         private Long accountId; // Account ID  
         private String boxName; // 머니박스 이름
         private String accountNumber; // 계좌번호
-        private BigDecimal balance; // 잔액 (추후 Account에서 조회)
+        private BigDecimal balance; // 잔액
         private boolean hasMoneyBox; // 머니박스 존재 여부
     }
 }

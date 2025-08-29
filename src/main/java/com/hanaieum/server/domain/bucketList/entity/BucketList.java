@@ -2,6 +2,7 @@ package com.hanaieum.server.domain.bucketList.entity;
 
 import com.hanaieum.server.common.entity.BaseEntity;
 import com.hanaieum.server.domain.member.entity.Member;
+import com.hanaieum.server.domain.account.entity.Account;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -56,5 +57,9 @@ public class BucketList extends BaseEntity {
     @OneToMany(mappedBy = "bucketList", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<BucketParticipant> participants = new ArrayList<>();
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "money_box_account_id", nullable = true)
+    private Account moneyBoxAccount;
 
 }

@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface AccountRepository extends JpaRepository<Account, Long> {
@@ -17,6 +18,8 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     boolean existsByNumber(String number);
     
     Optional<Account> findByMemberAndAccountTypeAndDeletedFalse(Member member, AccountType accountType);
+
+    List<Account> findAllByMemberAndAccountTypeAndDeletedFalse(Member member, AccountType accountType);
 
     Optional<Account> findByIdAndDeletedFalse(Long id);
 

@@ -13,14 +13,7 @@ import com.hanaieum.server.domain.bucketList.repository.BucketParticipantReposit
 import com.hanaieum.server.domain.group.entity.Group;
 import com.hanaieum.server.domain.member.entity.Member;
 import com.hanaieum.server.domain.member.repository.MemberRepository;
-import com.hanaieum.server.domain.moneyBox.service.MoneyBoxSettingsService;
-import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxSettingsResponse;
 import com.hanaieum.server.domain.account.service.AccountService;
-import com.hanaieum.server.domain.account.entity.Account;
-import com.hanaieum.server.domain.account.entity.AccountType;
-import com.hanaieum.server.domain.account.repository.AccountRepository;
-import com.hanaieum.server.domain.autoTransfer.entity.AutoTransferSchedule;
-import com.hanaieum.server.domain.autoTransfer.repository.AutoTransferScheduleRepository;
 import com.hanaieum.server.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +22,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -42,10 +34,7 @@ public class BucketListServiceImpl implements BucketListService {
     private final BucketListRepository bucketListRepository;
     private final BucketParticipantRepository bucketParticipantRepository;
     private final MemberRepository memberRepository;
-    private final MoneyBoxSettingsService moneyBoxSettingsService;
     private final AccountService accountService;
-    private final AccountRepository accountRepository;
-    private final AutoTransferScheduleRepository autoTransferScheduleRepository;
 
     @Override
     @Transactional
@@ -85,21 +74,12 @@ public class BucketListServiceImpl implements BucketListService {
         // 머니박스 자동 생성 (옵션이 true인 경우)
         if (requestDto.getCreateMoneyBox() != null && requestDto.getCreateMoneyBox()) {
             try {
-                MoneyBoxSettingsResponse moneyBoxResponse = moneyBoxSettingsService.createMoneyBoxForBucketList(
+                accountService.createMoneyBoxForBucketList(
                     savedBucketList, 
                     member, 
                     requestDto.getMoneyBoxName()
                 );
                 log.info("버킷리스트와 연동된 머니박스 생성 완료: bucketListId = {}", savedBucketList.getId());
-                
-                // 자동이체 설정이 활성화된 경우 자동이체 스케줄 생성
-                if (requestDto.getEnableAutoTransfer() != null && requestDto.getEnableAutoTransfer() && 
-                    requestDto.getMonthlyAmount() != null && requestDto.getTransferDay() != null) {
-                    
-                    createAutoTransferSchedule(member, moneyBoxResponse.getAccountId(), 
-                            requestDto.getMonthlyAmount(), Integer.parseInt(requestDto.getTransferDay()));
-                }
-                
             } catch (Exception e) {
                 log.warn("머니박스 자동 생성 실패 (버킷리스트 생성은 완료됨): bucketListId = {}, error = {}", 
                         savedBucketList.getId(), e.getMessage());
@@ -224,7 +204,7 @@ public class BucketListServiceImpl implements BucketListService {
     
     @Override
     public List<BucketListResponse> getGroupMembersBucketLists() {
-        log.info("그룹원의 공개 버킷리스트 목록 조회 요청");
+        log.info("그룹원들의 공개 버킷리스트 목록 조회 요청");
         
         // 현재 로그인한 사용자 정보 가져오기
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -330,18 +310,13 @@ public class BucketListServiceImpl implements BucketListService {
             
             // 공동 버킷리스트에도 머니박스 자동 생성
             try {
-                MoneyBoxSettingsResponse sharedMoneyBoxResponse = moneyBoxSettingsService.createMoneyBoxForBucketList(
+                accountService.createMoneyBoxForBucketList(
                     savedSharedBucketList, 
                     targetMember, 
                     null // 버킷리스트 제목 사용
                 );
                 log.info("공동 버킷리스트 머니박스 생성 완료: bucketListId = {}, memberId = {}", 
                         savedSharedBucketList.getId(), targetMember.getId());
-                
-                // 원본 요청에 자동이체 설정이 있었다면 공동 버킷리스트에도 적용
-                // 실제 구현에서는 공동 버킷리스트 생성 시 개별적으로 자동이체 설정을 받아야 할 수 있음
-                // 지금은 원본과 동일한 설정으로 생성
-                
             } catch (Exception e) {
                 log.warn("공동 버킷리스트 머니박스 자동 생성 실패: bucketListId = {}, memberId = {}, error = {}", 
                         savedSharedBucketList.getId(), targetMember.getId(), e.getMessage());
@@ -450,43 +425,4 @@ public class BucketListServiceImpl implements BucketListService {
         log.info("모든 참여자 비활성화 완료: {}명", participants.size());
     }
     
-    /**
-     * 자동이체 스케줄 생성 (주계좌 -> 머니박스 계좌)
-     */
-    @Transactional
-    protected void createAutoTransferSchedule(Member member, Long toAccountId, BigDecimal monthlyAmount, Integer transferDay) {
-        try {
-            log.info("자동이체 스케줄 생성 시작: memberId = {}, toAccountId = {}, amount = {}, transferDay = {}", 
-                    member.getId(), toAccountId, monthlyAmount, transferDay);
-            
-            // 주계좌 조회 (출금 계좌)
-            Account fromAccount = accountRepository.findByMemberAndAccountTypeAndDeletedFalse(member, AccountType.MAIN)
-                    .orElseGet(() -> {
-                        log.warn("주계좌가 존재하지 않아 자동 생성합니다: memberId = {}", member.getId());
-                        Long mainAccountId = accountService.createMainAccount(member);
-                        return accountService.findById(mainAccountId);
-                    });
-            
-            // 머니박스 계좌 조회 (입금 계좌)
-            Account toAccount = accountService.findById(toAccountId);
-            
-            // 자동이체 스케줄 엔티티 생성 및 저장
-            AutoTransferSchedule schedule = AutoTransferSchedule.builder()
-                    .fromAccount(fromAccount)
-                    .toAccount(toAccount)
-                    .amount(monthlyAmount)
-                    .transferDay(transferDay)
-                    .active(true)
-                    .deleted(false)
-                    .build();
-            
-            autoTransferScheduleRepository.save(schedule);
-            log.info("자동이체 스케줄 생성 완료: scheduleId = {}", schedule.getId());
-            
-        } catch (Exception e) {
-            log.warn("자동이체 스케줄 생성 실패: memberId = {}, toAccountId = {}, error = {}", 
-                    member.getId(), toAccountId, e.getMessage());
-            // 자동이체 스케줄 생성 실패해도 전체 프로세스는 계속 진행
-        }
-    }
 }

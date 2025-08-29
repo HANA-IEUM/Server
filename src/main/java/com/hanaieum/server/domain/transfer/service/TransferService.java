@@ -4,10 +4,10 @@ import java.math.BigDecimal;
 
 public interface TransferService {
     
-    void fillMoneyBox(Long fromAccountId, Long toAccountId, BigDecimal amount, String password);
+    void fillMoneyBox(Long memberId, Long moneyBoxAccountId, BigDecimal amount, String password);
     
-    void sponsorMoneyBox(Long fromAccountId, Long toAccountId, BigDecimal amount, String password, Long bucketId);
+    void sponsorBucket(Long sponsorMemberId, Long bucketId, BigDecimal amount, String password);
     
-    void achieveBucket(Long fromAccountId, Long toAccountId, BigDecimal amount, String password, Long bucketId);
+    void achieveBucket(Long memberId, Long bucketId, BigDecimal amount, String password);
     
 }
