@@ -156,7 +156,7 @@ public class AccountServiceImpl implements AccountService {
 
         log.info("주계좌 조회 완료 - 회원 ID: {}, 계좌번호: {}", member.getId(), mainAccount.getNumber());
         
-        return MainAccountResponse.of(mainAccount);
+        return MainAccountResponse.of(mainAccount, member.isMainAccountLinked());
     }
 
     @Override

@@ -17,8 +17,9 @@ public class MainAccountResponse {
     private String bankName;
     private Long balance;
     private String accountType;
+    private boolean mainAccountLinked;
     
-    public static MainAccountResponse of(Account account) {
+    public static MainAccountResponse of(Account account, boolean mainAccountLinked) {
         return MainAccountResponse.builder()
                 .accountId(account.getId())
                 .accountNumber(account.getNumber())
@@ -26,6 +27,7 @@ public class MainAccountResponse {
                 .bankName(account.getBankName())
                 .balance(account.getBalance())
                 .accountType(account.getAccountType().name())
+                .mainAccountLinked(mainAccountLinked)
                 .build();
     }
 }
