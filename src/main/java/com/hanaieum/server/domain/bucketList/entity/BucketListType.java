@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 
 @Getter
 @RequiredArgsConstructor
-public enum BucketLIstType {
+public enum BucketListType {
 
     TRIP("여행"),
     HOBBY("취미"),

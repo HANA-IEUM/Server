@@ -29,7 +29,7 @@ public class BucketList extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50, name = "category")
-    private BucketLIstType type; // 카테고리
+    private BucketListType type; // 카테고리
 
     @Column(nullable = false, length = 200)
     private String title; // 제목

@@ -1,6 +1,6 @@
 package com.hanaieum.server.domain.bucketList.dto;
 
-import com.hanaieum.server.domain.bucketList.entity.BucketLIstType;
+import com.hanaieum.server.domain.bucketList.entity.BucketListType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -18,7 +18,7 @@ import java.util.List;
 public class BucketListRequest {
     
     @NotNull(message = "카테고리는 필수 입력값입니다.")
-    private BucketLIstType type; // 카테고리
+    private BucketListType type; // 카테고리
     
     @NotBlank(message = "제목은 필수 입력값입니다.")
     private String title; // 제목

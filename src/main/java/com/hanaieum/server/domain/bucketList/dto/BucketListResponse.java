@@ -1,7 +1,7 @@
 package com.hanaieum.server.domain.bucketList.dto;
 
 
-import com.hanaieum.server.domain.bucketList.entity.BucketLIstType;
+import com.hanaieum.server.domain.bucketList.entity.BucketListType;
 import com.hanaieum.server.domain.bucketList.entity.BucketList;
 import com.hanaieum.server.domain.bucketList.entity.BucketListStatus;
 import lombok.*;
@@ -20,7 +20,7 @@ public class BucketListResponse {
 
     private Long id; // 버킷리스트 ID
     private Long memberId; // 회원 ID
-    private BucketLIstType type; // 카테고리
+    private BucketListType type; // 카테고리
     private String title; // 제목
     private BigDecimal targetAmount; // 목표금액
     private LocalDate targetDate; // 목표기간
