@@ -5,6 +5,7 @@ import com.hanaieum.server.domain.member.entity.Member;
 import com.hanaieum.server.domain.bucketList.entity.BucketList;
 import jakarta.persistence.*;
 import lombok.*;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "accounts")
@@ -35,8 +36,8 @@ public class Account extends BaseEntity {
     @Column(name = "account_password", nullable = false)
     private String password;
 
-    @Column(nullable = false)
-    private Long balance;
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal balance;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -52,7 +53,7 @@ public class Account extends BaseEntity {
     @OneToOne(mappedBy = "moneyBoxAccount", fetch = FetchType.LAZY)
     private BucketList bucketList;
 
-    public void updateBalance(Long balance) {
+    public void updateBalance(BigDecimal balance) {
         this.balance = balance;
     }
 

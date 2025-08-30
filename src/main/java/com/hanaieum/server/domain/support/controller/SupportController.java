@@ -18,7 +18,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/support")
 @RequiredArgsConstructor
-@Tag(name = "Support", description = "후원/응원 관리 API")
+@Tag(name = "Support API", description = "후원/응원 관리 API")
 public class SupportController {
 
     private final SupportService supportService;

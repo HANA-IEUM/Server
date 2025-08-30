@@ -19,24 +19,37 @@ public class Transaction extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // 내 계좌
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "from_account_id")
-    private Account fromAccount;
+    @JoinColumn(name = "account_id", nullable = false)
+    private Account account;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "to_account_id")
-    private Account toAccount;
+    // 거래 성격 (입금/출금)
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private TransactionType transactionType; // DEPOSIT, WITHDRAW
 
+    // 거래 금액
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal amount;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "transaction_type", nullable = false)
-    private TransactionType transactionType;
+    // 거래 후 잔액 (내 계좌 기준)
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal balanceAfter;
 
-    @Column(length = 100)
+    // 상대방 계좌 ID
+    @Column(name = "counterparty_account_id")
+    private Long counterpartyAccountId;
+
+    // 상대방 이름 (예금주명)
+    @Column(name = "counterparty_name", length = 100)
+    private String counterpartyName;
+
+    // 설명 (ex: 머니박스 채우기, 버킷 후원 등)
+    @Column(length = 200)
     private String description;
 
+    // 참조 정보 (버킷, 자동이체 등)
     @Column(name = "reference_id")
     private Long referenceId;
 

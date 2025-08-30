@@ -1,11 +1,12 @@
 package com.hanaieum.server.domain.transfer.service;
 
+import com.hanaieum.server.common.exception.CustomException;
+import com.hanaieum.server.common.exception.ErrorCode;
 import com.hanaieum.server.domain.account.entity.Account;
 import com.hanaieum.server.domain.account.service.AccountService;
 import com.hanaieum.server.domain.bucketList.entity.BucketList;
 import com.hanaieum.server.domain.bucketList.repository.BucketListRepository;
 import com.hanaieum.server.domain.transaction.entity.ReferenceType;
-import com.hanaieum.server.domain.transaction.entity.TransactionType;
 import com.hanaieum.server.domain.transaction.service.TransactionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,10 +32,15 @@ public class TransferServiceImpl implements TransferService {
         // 1. 회원의 주계좌 조회
         Account fromAccount = accountService.getMainAccountByMemberId(memberId);
         
-        // 2. 머니박스 계좌 소유권 검증
+        // 2. 동일한 계좌로 이체하는지 체크
+        if (fromAccount.getId().equals(moneyBoxAccountId)) {
+            throw new CustomException(ErrorCode.INVALID_TRANSFER_SAME_ACCOUNT);
+        }
+        
+        // 3. 머니박스 계좌 소유권 검증
         accountService.validateAccountOwnership(moneyBoxAccountId, memberId);
         
-        // 3. 이체 실행
+        // 4. 이체 실행
         executeTransfer(fromAccount, moneyBoxAccountId, amount, password, 
                       ReferenceType.MONEY_BOX_TRANSFER, null);
         
@@ -78,28 +84,27 @@ public class TransferServiceImpl implements TransferService {
 
     private void executeTransfer(Account fromAccount, Long toAccountId, BigDecimal amount, 
                                String password, ReferenceType referenceType, Long referenceId) {
-        // 1. 출금 계좌 비밀번호 검증
+        // 1. 비밀번호 검증
         accountService.validateAccountPassword(fromAccount.getId(), password);
         
         // 2. 잔액 검증
         accountService.validateSufficientBalance(fromAccount.getId(), amount);
         
-        // 3. 계좌 정보 조회 (락과 함께)
+        // 3. 계좌 조회 (락 걸기)
         Account lockedFromAccount = accountService.findByIdWithLock(fromAccount.getId());
         Account toAccount = accountService.findByIdWithLock(toAccountId);
         
-        // 4. 출금 처리
-        accountService.debitBalance(fromAccount.getId(), amount);
+        // 4. 출금
+        accountService.debitBalance(lockedFromAccount.getId(), amount);
         
-        // 5. 입금 처리
-        accountService.creditBalance(toAccountId, amount);
+        // 5. 입금
+        accountService.creditBalance(toAccount.getId(), amount);
         
-        // 6. 거래 내역 기록
-        transactionService.createTransaction(
-            lockedFromAccount, 
-            toAccount, 
-            amount, 
-            TransactionType.TRANSFER,
+        // 6. 거래내역 2건 생성
+        transactionService.recordTransfer(
+            lockedFromAccount,
+            toAccount,
+            amount,
             referenceType,
             referenceType.getDescription(),
             referenceId

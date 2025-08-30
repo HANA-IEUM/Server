@@ -4,6 +4,7 @@ import com.hanaieum.server.common.dto.ApiResponse;
 import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxFillRequest;
 import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxRequest;
 import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxResponse;
+import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxInfoResponse;
 import com.hanaieum.server.domain.moneyBox.service.MoneyBoxService;
 import com.hanaieum.server.domain.transfer.service.TransferService;
 import com.hanaieum.server.security.CustomUserDetails;
@@ -85,6 +86,22 @@ public class MoneyBoxController {
                 request.getAmount(), request.getAccountPassword());
         
         return ResponseEntity.ok(ApiResponse.ok("머니박스 채우기가 완료되었습니다."));
+    }
+
+    @Operation(summary = "머니박스 정보 조회", description = "머니박스의 상세 정보를 조회합니다 (잔액, 자동이체 설정, 연결된 버킷리스트 정보 포함).")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "머니박스 정보 조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "접근 권한 없음"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "머니박스를 찾을 수 없음")
+    })
+    @GetMapping("/{boxId}/info")
+    public ResponseEntity<ApiResponse<MoneyBoxInfoResponse>> getMoneyBoxInfo(@PathVariable Long boxId) {
+        log.info("머니박스 정보 조회 API 호출: boxId = {}", boxId);
+        
+        MoneyBoxInfoResponse response = moneyBoxService.getMoneyBoxInfo(boxId);
+        
+        return ResponseEntity.ok(ApiResponse.ok(response));
     }
  
 }

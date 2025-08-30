@@ -6,11 +6,11 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public enum ReferenceType {
-    MANUAL("수동 이체"),
+    MANUAL("이체"),
     AUTO_TRANSFER("자동이체"),
-    BUCKET_ACHIEVEMENT("버킷리스트 달성"),
-    BUCKET_FUNDING("버킷리스트 후원"),
-    MONEY_BOX_TRANSFER("머니박스 채우기");
+    BUCKET_ACHIEVEMENT("목표 달성 인출"),
+    BUCKET_FUNDING("후원"),
+    MONEY_BOX_TRANSFER("머니박스 충전");
     
     private final String description;
 }

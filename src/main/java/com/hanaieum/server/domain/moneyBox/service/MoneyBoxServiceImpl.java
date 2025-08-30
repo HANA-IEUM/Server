@@ -10,6 +10,7 @@ import com.hanaieum.server.domain.autoTransfer.entity.AutoTransferSchedule;
 import com.hanaieum.server.domain.autoTransfer.repository.AutoTransferScheduleRepository;
 import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxRequest;
 import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxResponse;
+import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxInfoResponse;
 import com.hanaieum.server.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -83,6 +84,37 @@ public class MoneyBoxServiceImpl implements MoneyBoxService {
         return activeMoneyBoxAccounts.stream()
                 .map(MoneyBoxResponse::of)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public MoneyBoxInfoResponse getMoneyBoxInfo(Long boxId) {
+        Member currentMember = getCurrentMember();
+        
+        // 머니박스 계좌 조회 및 검증
+        Account account = accountRepository.findByIdAndDeletedFalse(boxId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
+        
+        // 계좌 소유권 검증
+        if (!account.getMember().getId().equals(currentMember.getId())) {
+            throw new CustomException(ErrorCode.ACCOUNT_ACCESS_DENIED);
+        }
+        
+        // MONEY_BOX 타입 계좌인지 검증
+        if (account.getAccountType() != AccountType.MONEY_BOX) {
+            throw new CustomException(ErrorCode.INVALID_ACCOUNT_TYPE);
+        }
+        
+        // 자동이체 스케줄 조회
+        Account mainAccount = accountRepository.findByMemberAndAccountTypeAndDeletedFalse(currentMember, AccountType.MAIN)
+                .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
+        
+        Optional<AutoTransferSchedule> autoTransfer = autoTransferScheduleRepository
+                .findByFromAccountAndToAccountAndActiveTrueAndDeletedFalse(mainAccount, account);
+        
+        log.info("머니박스 요약 조회 완료: boxId={}, hasAutoTransfer={}", boxId, autoTransfer.isPresent());
+        
+        return MoneyBoxInfoResponse.of(account, autoTransfer.orElse(null));
     }
 
     private Member getCurrentMember() {

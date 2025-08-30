@@ -1,16 +1,17 @@
 package com.hanaieum.server.domain.transaction.service;
 
 import com.hanaieum.server.domain.account.entity.Account;
+import com.hanaieum.server.domain.transaction.dto.TransactionResponse;
 import com.hanaieum.server.domain.transaction.entity.ReferenceType;
-import com.hanaieum.server.domain.transaction.entity.Transaction;
-import com.hanaieum.server.domain.transaction.entity.TransactionType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 
 public interface TransactionService {
     
-    Transaction createTransaction(Account fromAccount, Account toAccount, BigDecimal amount, 
-                                TransactionType transactionType, ReferenceType referenceType, 
-                                String description, Long referenceId);
-
+    void recordTransfer(Account fromAccount, Account toAccount, BigDecimal amount,
+                       ReferenceType referenceType, String description, Long referenceId);
+    
+    Page<TransactionResponse> getTransactionsByAccountId(Long memberId, Long accountId, Pageable pageable);
 }
