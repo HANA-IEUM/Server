@@ -1,5 +1,7 @@
 package com.hanaieum.server.domain.transfer.service;
 
+import com.hanaieum.server.common.exception.CustomException;
+import com.hanaieum.server.common.exception.ErrorCode;
 import com.hanaieum.server.domain.account.entity.Account;
 import com.hanaieum.server.domain.account.service.AccountService;
 import com.hanaieum.server.domain.bucketList.entity.BucketList;
@@ -30,10 +32,15 @@ public class TransferServiceImpl implements TransferService {
         // 1. 회원의 주계좌 조회
         Account fromAccount = accountService.getMainAccountByMemberId(memberId);
         
-        // 2. 머니박스 계좌 소유권 검증
+        // 2. 동일한 계좌로 이체하는지 체크
+        if (fromAccount.getId().equals(moneyBoxAccountId)) {
+            throw new CustomException(ErrorCode.INVALID_TRANSFER_SAME_ACCOUNT);
+        }
+        
+        // 3. 머니박스 계좌 소유권 검증
         accountService.validateAccountOwnership(moneyBoxAccountId, memberId);
         
-        // 3. 이체 실행
+        // 4. 이체 실행
         executeTransfer(fromAccount, moneyBoxAccountId, amount, password, 
                       ReferenceType.MONEY_BOX_TRANSFER, null);
         

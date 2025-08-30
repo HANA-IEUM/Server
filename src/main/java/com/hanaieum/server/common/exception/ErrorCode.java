@@ -37,6 +37,7 @@ public enum ErrorCode {
     INVALID_ACCOUNT_PASSWORD("ACCOUNT_003", "계좌 비밀번호가 올바르지 않습니다", HttpStatus.UNAUTHORIZED),
     INSUFFICIENT_BALANCE("ACCOUNT_004", "계좌 잔액이 부족합니다", HttpStatus.BAD_REQUEST),
     INVALID_ACCOUNT_TYPE("ACCOUNT_005", "유효하지 않은 계좌 타입입니다", HttpStatus.BAD_REQUEST),
+    INVALID_TRANSFER_SAME_ACCOUNT("ACCOUNT_006", "동일한 계좌로는 이체할 수 없습니다", HttpStatus.BAD_REQUEST),
 
     // 버킷리스트 관련 에러
     BUCKET_LIST_NOT_FOUND("BUCKET_LIST_001", "버킷리스트를 찾을 수 없습니다", HttpStatus.NOT_FOUND),
