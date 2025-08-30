@@ -1,12 +1,16 @@
 package com.hanaieum.server.domain.transaction.service;
 
 import com.hanaieum.server.domain.account.entity.Account;
+import com.hanaieum.server.domain.account.service.AccountService;
+import com.hanaieum.server.domain.transaction.dto.TransactionResponse;
 import com.hanaieum.server.domain.transaction.entity.ReferenceType;
 import com.hanaieum.server.domain.transaction.entity.Transaction;
 import com.hanaieum.server.domain.transaction.entity.TransactionType;
 import com.hanaieum.server.domain.transaction.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +23,7 @@ import java.math.BigDecimal;
 public class TransactionServiceImpl implements TransactionService {
 
     private final TransactionRepository transactionRepository;
+    private final AccountService accountService;
 
     @Override
     public void recordTransfer(Account fromAccount, Account toAccount, BigDecimal amount,
@@ -31,7 +36,7 @@ public class TransactionServiceImpl implements TransactionService {
                 .amount(amount)
                 .balanceAfter(fromAccount.getBalance()) // debit 이후 값
                 .counterpartyAccountId(toAccount.getId())
-                .counterpartyName(toAccount.getName())
+                .counterpartyName(toAccount.getMember().getName())
                 .description(description)
                 .referenceType(referenceType)
                 .referenceId(referenceId)
@@ -46,7 +51,7 @@ public class TransactionServiceImpl implements TransactionService {
                 .amount(amount)
                 .balanceAfter(toAccount.getBalance()) // credit 이후 값
                 .counterpartyAccountId(fromAccount.getId())
-                .counterpartyName(fromAccount.getName())
+                .counterpartyName(fromAccount.getMember().getName())
                 .description(description)
                 .referenceType(referenceType)
                 .referenceId(referenceId)
@@ -58,4 +63,18 @@ public class TransactionServiceImpl implements TransactionService {
                 fromAccount.getId(), toAccount.getId(), amount, referenceType);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Page<TransactionResponse> getTransactionsByAccountId(Long memberId, Long accountId, Pageable pageable) {
+
+        // 계좌 소유권 검증
+        accountService.validateAccountOwnership(accountId, memberId);
+        
+        Page<Transaction> transactions = transactionRepository.findByAccountIdOrderByCreatedAtDesc(accountId, pageable);
+        
+        log.info("거래내역 조회 완료 - 회원 ID: {}, 계좌 ID: {}, 페이지: {}, 사이즈: {}, 총 개수: {}", 
+                memberId, accountId, pageable.getPageNumber(), pageable.getPageSize(), transactions.getTotalElements());
+        
+        return transactions.map(TransactionResponse::of);
+    }
 }
