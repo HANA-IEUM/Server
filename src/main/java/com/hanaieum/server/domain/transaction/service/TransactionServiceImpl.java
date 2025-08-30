@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.List;
 
 @Slf4j
 @Service
@@ -22,28 +21,41 @@ public class TransactionServiceImpl implements TransactionService {
     private final TransactionRepository transactionRepository;
 
     @Override
-    public Transaction createTransaction(Account fromAccount, Account toAccount, BigDecimal amount,
-                                       TransactionType transactionType, ReferenceType referenceType,
-                                       String description, Long referenceId) {
-        Transaction transaction = Transaction.builder()
-                .fromAccount(fromAccount)
-                .toAccount(toAccount)
+    public void recordTransfer(Account fromAccount, Account toAccount, BigDecimal amount,
+                               ReferenceType referenceType, String description, Long referenceId) {
+
+        // 출금 레코드 생성
+        Transaction withdrawTx = Transaction.builder()
+                .account(fromAccount)
+                .transactionType(TransactionType.WITHDRAW)
                 .amount(amount)
-                .transactionType(transactionType)
-                .referenceType(referenceType)
+                .balanceAfter(fromAccount.getBalance()) // debit 이후 값
+                .counterpartyAccountId(toAccount.getId())
+                .counterpartyName(toAccount.getName())
                 .description(description)
+                .referenceType(referenceType)
                 .referenceId(referenceId)
                 .build();
 
-        Transaction savedTransaction = transactionRepository.save(transaction);
+        transactionRepository.save(withdrawTx);
+
+        // 입금 레코드 생성
+        Transaction depositTx = Transaction.builder()
+                .account(toAccount)
+                .transactionType(TransactionType.DEPOSIT)
+                .amount(amount)
+                .balanceAfter(toAccount.getBalance()) // credit 이후 값
+                .counterpartyAccountId(fromAccount.getId())
+                .counterpartyName(fromAccount.getName())
+                .description(description)
+                .referenceType(referenceType)
+                .referenceId(referenceId)
+                .build();
+
+        transactionRepository.save(depositTx);
         
-        log.info("거래 기록 생성 완료 - ID: {}, 출금계좌: {}, 입금계좌: {}, 금액: {}, 타입: {}, 참조: {}", 
-                savedTransaction.getId(), 
-                fromAccount != null ? fromAccount.getId() : "없음", 
-                toAccount != null ? toAccount.getId() : "없음",
-                amount, transactionType, referenceType);
-                
-        return savedTransaction;
+        log.info("이체 거래 기록 생성 완료 - 출금: {}, 입금: {}, 금액: {}, 참조: {}", 
+                fromAccount.getId(), toAccount.getId(), amount, referenceType);
     }
 
 }

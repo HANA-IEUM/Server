@@ -11,8 +11,8 @@ import java.math.BigDecimal;
 public interface AccountService {
 
     // === 범용 계좌 생성 메서드 ===
-    Long createAccount(Member member, String accountName, String bankName, AccountType accountType, Long balance, String password);
-    Long createAccount(Long memberId, String accountName, String bankName, AccountType accountType, Long balance, String password);
+    Long createAccount(Member member, String accountName, String bankName, AccountType accountType, BigDecimal balance, String password);
+    Long createAccount(Long memberId, String accountName, String bankName, AccountType accountType, BigDecimal balance, String password);
     
     // === 주계좌 생성 메서드 ===
     Long createMainAccount(Member member); // 연계 실행, 회원가입 -> 계좌 생성(동일 트랜잭션)

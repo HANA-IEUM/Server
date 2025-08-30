@@ -17,7 +17,7 @@ public class MoneyBoxResponse {
     private String accountNumber; // 계좌번호
     private String accountName; // 계좌명
     private String bankName; // 은행명
-    private Long balance; // 잔액
+    private BigDecimal balance; // 잔액
     private Long bucketListId; // 연결된 버킷리스트 ID
     private String bucketListTitle; // 버킷리스트 제목
     private BigDecimal targetAmount; // 버킷리스트 목표금액

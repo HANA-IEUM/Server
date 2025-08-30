@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
 
 @Getter
 @NoArgsConstructor
@@ -15,7 +16,7 @@ public class MainAccountResponse {
     private String accountNumber;
     private String accountName;
     private String bankName;
-    private Long balance;
+    private BigDecimal balance;
     private String accountType;
     private boolean mainAccountLinked;
     

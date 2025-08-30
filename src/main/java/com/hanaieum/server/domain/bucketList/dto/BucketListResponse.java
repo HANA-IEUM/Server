@@ -51,7 +51,7 @@ public class BucketListResponse {
                     .accountId(bucketList.getMoneyBoxAccount().getId())
                     .boxName(bucketList.getMoneyBoxAccount().getBoxName())
                     .accountNumber(bucketList.getMoneyBoxAccount().getNumber())
-                    .balance(BigDecimal.valueOf(bucketList.getMoneyBoxAccount().getBalance()))
+                    .balance(bucketList.getMoneyBoxAccount().getBalance())
                     .hasMoneyBox(true)
                     .build();
         } else {

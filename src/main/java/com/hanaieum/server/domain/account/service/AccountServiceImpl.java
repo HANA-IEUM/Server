@@ -34,7 +34,7 @@ public class AccountServiceImpl implements AccountService {
     private final AutoTransferScheduleRepository autoTransferScheduleRepository;
     
     @Override
-    public Long createAccount(Member member, String accountName, String bankName, AccountType accountType, Long balance, String password) {
+    public Long createAccount(Member member, String accountName, String bankName, AccountType accountType, BigDecimal balance, String password) {
         // 유니크한 계좌번호 생성
         String accountNumber = generateUniqueAccountNumber(accountType);
         
@@ -72,11 +72,11 @@ public class AccountServiceImpl implements AccountService {
         String randomAccountName = accountNames.get(random.nextInt(accountNames.size()));
         
         // 주계좌 생성 (잔액: 7천만원, 비밀번호: 1234)
-        return createAccount(member, randomAccountName, "하나은행", AccountType.MAIN, 70000000L, "1234");
+        return createAccount(member, randomAccountName, "하나은행", AccountType.MAIN, new BigDecimal("70000000"), "1234");
     }
     
     @Override
-    public Long createAccount(Long memberId, String accountName, String bankName, AccountType accountType, Long balance, String password) {
+    public Long createAccount(Long memberId, String accountName, String bankName, AccountType accountType, BigDecimal balance, String password) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
         
@@ -95,7 +95,7 @@ public class AccountServiceImpl implements AccountService {
                 .name("하나머니박스")
                 .bankName("하나은행")
                 .password(encodedAccountPassword)
-                .balance(0L)
+                .balance(BigDecimal.ZERO)
                 .accountType(AccountType.MONEY_BOX)
                 .boxName(boxName)
                 .deleted(false)
@@ -255,7 +255,7 @@ public class AccountServiceImpl implements AccountService {
     @Transactional(readOnly = true)
     public void validateSufficientBalance(Long accountId, BigDecimal amount) {
         Account account = findById(accountId);
-        if (account.getBalance() < amount.longValue()) {
+        if (account.getBalance().compareTo(amount) < 0) {
             throw new CustomException(ErrorCode.INSUFFICIENT_BALANCE);
         }
     }
@@ -263,8 +263,8 @@ public class AccountServiceImpl implements AccountService {
     @Override
     public void debitBalance(Long accountId, BigDecimal amount) {
         Account account = findByIdWithLock(accountId);
-        long newBalance = account.getBalance() - amount.longValue();
-        if (newBalance < 0) {
+        BigDecimal newBalance = account.getBalance().subtract(amount);
+        if (newBalance.compareTo(BigDecimal.ZERO) < 0) {
             throw new CustomException(ErrorCode.INSUFFICIENT_BALANCE);
         }
         account.updateBalance(newBalance);
@@ -275,7 +275,7 @@ public class AccountServiceImpl implements AccountService {
     @Override
     public void creditBalance(Long accountId, BigDecimal amount) {
         Account account = findByIdWithLock(accountId);
-        long newBalance = account.getBalance() + amount.longValue();
+        BigDecimal newBalance = account.getBalance().add(amount);
         account.updateBalance(newBalance);
         accountRepository.save(account);
         log.info("입금 처리 완료 - 계좌 ID: {}, 입금액: {}, 잔액: {}", accountId, amount, newBalance);
