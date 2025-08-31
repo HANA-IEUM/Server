@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "auto_transfer_schedules")
@@ -18,7 +19,6 @@ public class AutoTransferSchedule extends BaseEntity {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "schedule_id")
     private Long id; // PK
     
     @ManyToOne(fetch = FetchType.LAZY)
@@ -42,4 +42,10 @@ public class AutoTransferSchedule extends BaseEntity {
     @Column(name = "is_deleted", nullable = false)
     @Builder.Default
     private Boolean deleted = false; // 삭제 여부
+    
+    @Column(name = "valid_from", nullable = false)
+    private LocalDate validFrom; // 이 스케줄이 시작되는 달
+    
+    @Column(name = "valid_to")
+    private LocalDate validTo; // 이 스케줄이 끝나는 달 (null이면 현재 유효)
 }

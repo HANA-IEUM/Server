@@ -5,6 +5,8 @@ import com.hanaieum.server.domain.autoTransfer.entity.AutoTransferSchedule;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
 
 @Getter
 @Setter
@@ -16,18 +18,36 @@ public class MoneyBoxInfoResponse {
     private Long boxId; // 계좌 ID
     private String boxName; // 박스이름
     private BigDecimal balance; // 잔액
-    private Integer autoTransferDay; // 자동이체일 (null 가능)
-    private BigDecimal autoTransferAmount; // 자동이체 금액 (null 가능)
+    
+    // 다음달 자동이체 예정 정보 (실제 다음달에 이체될 정보)
+    private Integer nextTransferDay; // 다음달 자동이체일 (null이면 비활성화)
+    private BigDecimal nextTransferAmount; // 다음달 자동이체 금액 (null이면 비활성화)
+    
     private Long bucketId; // 연관된 버킷리스트 ID
     private String bucketTitle; // 버킷리스트 title
     
-    public static MoneyBoxInfoResponse of(Account account, AutoTransferSchedule autoTransfer) {
-        // 자동이체 정보
-        Integer transferDay = null;
-        BigDecimal transferAmount = null;
-        if (autoTransfer != null) {
-            transferDay = autoTransfer.getTransferDay();
-            transferAmount = autoTransfer.getAmount();
+    public static MoneyBoxInfoResponse of(Account account, AutoTransferSchedule currentSchedule, List<AutoTransferSchedule> futureSchedules) {
+        // 다음달에 실제로 이체될 정보 계산 (validTo 고려)
+        LocalDate nextMonth = LocalDate.now().withDayOfMonth(1).plusMonths(1);
+        Integer nextTransferDay = null;
+        BigDecimal nextTransferAmount = null;
+        
+        if (!futureSchedules.isEmpty()) {
+            // 미래 스케줄이 있으면 해당 스케줄이 다음달에 적용됨
+            AutoTransferSchedule nextSchedule = futureSchedules.get(0);
+            nextTransferDay = nextSchedule.getTransferDay();
+            nextTransferAmount = nextSchedule.getAmount();
+        } else if (currentSchedule != null) {
+            // 현재 스케줄이 다음달에도 유효한지 확인
+            boolean currentScheduleValidNextMonth = currentSchedule.getValidTo() == null || 
+                    !currentSchedule.getValidTo().isBefore(nextMonth);
+                    
+            if (currentScheduleValidNextMonth) {
+                // 현재 스케줄이 다음달에도 계속 적용됨
+                nextTransferDay = currentSchedule.getTransferDay();
+                nextTransferAmount = currentSchedule.getAmount();
+            }
+            // else: 현재 스케줄이 이번달로 종료 -> nextTransferDay, nextTransferAmount는 null 유지
         }
         
         // 버킷리스트 정보
@@ -42,8 +62,8 @@ public class MoneyBoxInfoResponse {
                 .boxId(account.getId())
                 .boxName(account.getBoxName())
                 .balance(account.getBalance())
-                .autoTransferDay(transferDay)
-                .autoTransferAmount(transferAmount)
+                .nextTransferDay(nextTransferDay)
+                .nextTransferAmount(nextTransferAmount)
                 .bucketId(bucketId)
                 .bucketTitle(bucketTitle)
                 .build();

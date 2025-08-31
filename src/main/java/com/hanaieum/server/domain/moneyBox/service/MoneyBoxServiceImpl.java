@@ -7,17 +7,18 @@ import com.hanaieum.server.domain.account.entity.AccountType;
 import com.hanaieum.server.domain.account.repository.AccountRepository;
 import com.hanaieum.server.domain.member.entity.Member;
 import com.hanaieum.server.domain.autoTransfer.entity.AutoTransferSchedule;
-import com.hanaieum.server.domain.autoTransfer.repository.AutoTransferScheduleRepository;
-import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxRequest;
+import com.hanaieum.server.domain.autoTransfer.service.AutoTransferScheduleService;
+import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxUpdateRequest;
+import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxUpdateResponse;
 import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxResponse;
 import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxInfoResponse;
-import com.hanaieum.server.security.CustomUserDetails;
+import com.hanaieum.server.domain.account.service.AccountService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,18 +29,18 @@ import java.util.Optional;
 public class MoneyBoxServiceImpl implements MoneyBoxService {
 
     private final AccountRepository accountRepository;
-    private final AutoTransferScheduleRepository autoTransferScheduleRepository;
+    private final AutoTransferScheduleService autoTransferScheduleService;
+    private final AccountService accountService;
 
     @Override
-    public MoneyBoxResponse updateMoneyBoxName(Long accountId, MoneyBoxRequest request) {
-        Member currentMember = getCurrentMember();
+    public MoneyBoxUpdateResponse updateMoneyBox(Member member, Long accountId, MoneyBoxUpdateRequest request) {
         
         // 계좌 조회 및 검증
         Account account = accountRepository.findByIdAndDeletedFalse(accountId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
         
         // 계좌 소유권 검증
-        if (!account.getMember().getId().equals(currentMember.getId())) {
+        if (!account.getMember().getId().equals(member.getId())) {
             throw new CustomException(ErrorCode.ACCOUNT_ACCESS_DENIED);
         }
         
@@ -48,30 +49,29 @@ public class MoneyBoxServiceImpl implements MoneyBoxService {
             throw new CustomException(ErrorCode.INVALID_ACCOUNT_TYPE);
         }
         
+        // 주계좌 비밀번호 검증 (머니박스 수정 시 무조건 필요)
+        validateAccountPassword(member, request.getAccountPassword());
+        
         // 머니박스 별명 업데이트
         account.setBoxName(request.getBoxName());
-        
-        // 자동이체 정보 업데이트 (값이 제공된 경우)
-        if (request.getMonthlyAmount() != null || request.getTransferDay() != null) {
-            updateAutoTransferSchedule(account, currentMember, request.getMonthlyAmount(), request.getTransferDay());
-        }
-        
         Account savedAccount = accountRepository.save(account);
         
-        log.info("머니박스 수정 완료: accountId={}, newBoxName={}, monthlyAmount={}, transferDay={}", 
-                accountId, request.getBoxName(), request.getMonthlyAmount(), request.getTransferDay());
+        // 자동이체 설정 처리 (AutoTransferScheduleService 사용)
+        updateAutoTransferSettings(account, member, request);
         
-        return MoneyBoxResponse.of(savedAccount);
+        log.info("머니박스 수정 완료: accountId={}, newBoxName={}, autoTransferEnabled={}, monthlyAmount={}, transferDay={}", 
+                accountId, request.getBoxName(), request.getAutoTransferEnabled(), request.getMonthlyAmount(), request.getTransferDay());
+        
+        // 수정 후 현재 상태 조회하여 응답 생성
+        return createUpdateResponse(savedAccount, member);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<MoneyBoxResponse> getMyMoneyBoxList() {
-        Member currentMember = getCurrentMember();
-        
+    public List<MoneyBoxResponse> getMyMoneyBoxList(Member member) {
         // 사용자의 모든 MONEY_BOX 타입 계좌 조회
         List<Account> moneyBoxAccounts = accountRepository.findAllByMemberAndAccountTypeAndDeletedFalse(
-                currentMember, AccountType.MONEY_BOX);
+                member, AccountType.MONEY_BOX);
         
         // 삭제된 버킷리스트와 연결된 머니박스는 제외
         List<Account> activeMoneyBoxAccounts = moneyBoxAccounts.stream()
@@ -79,7 +79,7 @@ public class MoneyBoxServiceImpl implements MoneyBoxService {
                 .toList();
         
         log.info("머니박스 목록 조회 완료: memberId={}, totalCount={}, activeCount={}", 
-                currentMember.getId(), moneyBoxAccounts.size(), activeMoneyBoxAccounts.size());
+                member.getId(), moneyBoxAccounts.size(), activeMoneyBoxAccounts.size());
         
         return activeMoneyBoxAccounts.stream()
                 .map(MoneyBoxResponse::of)
@@ -88,15 +88,13 @@ public class MoneyBoxServiceImpl implements MoneyBoxService {
 
     @Override
     @Transactional(readOnly = true)
-    public MoneyBoxInfoResponse getMoneyBoxInfo(Long boxId) {
-        Member currentMember = getCurrentMember();
-        
+    public MoneyBoxInfoResponse getMoneyBoxInfo(Member member, Long boxId) {
         // 머니박스 계좌 조회 및 검증
         Account account = accountRepository.findByIdAndDeletedFalse(boxId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
         
         // 계좌 소유권 검증
-        if (!account.getMember().getId().equals(currentMember.getId())) {
+        if (!account.getMember().getId().equals(member.getId())) {
             throw new CustomException(ErrorCode.ACCOUNT_ACCESS_DENIED);
         }
         
@@ -105,76 +103,90 @@ public class MoneyBoxServiceImpl implements MoneyBoxService {
             throw new CustomException(ErrorCode.INVALID_ACCOUNT_TYPE);
         }
         
-        // 자동이체 스케줄 조회
-        Account mainAccount = accountRepository.findByMemberAndAccountTypeAndDeletedFalse(currentMember, AccountType.MAIN)
+        // 자동이체 스케줄 조회 (현재 + 미래)
+        Account mainAccount = accountRepository.findByMemberAndAccountTypeAndDeletedFalse(member, AccountType.MAIN)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
         
-        Optional<AutoTransferSchedule> autoTransfer = autoTransferScheduleRepository
-                .findByFromAccountAndToAccountAndActiveTrueAndDeletedFalse(mainAccount, account);
+        Optional<AutoTransferSchedule> currentSchedule = autoTransferScheduleService
+                .getCurrentSchedule(mainAccount, account);
+        List<AutoTransferSchedule> futureSchedules = autoTransferScheduleService
+                .getFutureSchedules(mainAccount, account);
         
-        log.info("머니박스 요약 조회 완료: boxId={}, hasAutoTransfer={}", boxId, autoTransfer.isPresent());
+        log.info("머니박스 요약 조회 완료: boxId={}, hasCurrentSchedule={}, hasFutureSchedule={}", 
+                boxId, currentSchedule.isPresent(), !futureSchedules.isEmpty());
         
-        return MoneyBoxInfoResponse.of(account, autoTransfer.orElse(null));
+        return MoneyBoxInfoResponse.of(account, currentSchedule.orElse(null), futureSchedules);
     }
 
-    private Member getCurrentMember() {
-        CustomUserDetails userDetails = (CustomUserDetails) SecurityContextHolder.getContext()
-                .getAuthentication().getPrincipal();
-        return userDetails.getMember();
+    @Override
+    @Transactional(readOnly = true)
+    public MoneyBoxUpdateResponse getMoneyBoxForEdit(Member member, Long boxId) {
+        // 머니박스 계좌 조회 및 검증
+        Account account = accountRepository.findByIdAndDeletedFalse(boxId)
+                .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
+        
+        // 계좌 소유권 검증
+        if (!account.getMember().getId().equals(member.getId())) {
+            throw new CustomException(ErrorCode.ACCOUNT_ACCESS_DENIED);
+        }
+        
+        // MONEY_BOX 타입 계좌인지 검증
+        if (account.getAccountType() != AccountType.MONEY_BOX) {
+            throw new CustomException(ErrorCode.INVALID_ACCOUNT_TYPE);
+        }
+        
+        log.info("머니박스 수정 폼 데이터 조회 완료: boxId={}", boxId);
+        
+        return createUpdateResponse(account, member);
+    }
+
+    /**
+     * 자동이체 설정 업데이트 (AutoTransferScheduleService 위임)
+     */
+    private void updateAutoTransferSettings(Account moneyBoxAccount, Member member, MoneyBoxUpdateRequest request) {
+        // 사용자의 주계좌 조회 (출금 계좌)
+        Account mainAccount = accountRepository.findByMemberAndAccountTypeAndDeletedFalse(member, AccountType.MAIN)
+                .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
+        
+        // AutoTransferScheduleService에 위임
+        autoTransferScheduleService.updateSchedule(
+                mainAccount, 
+                moneyBoxAccount, 
+                request.getAutoTransferEnabled(), 
+                request.getMonthlyAmount(), 
+                request.getTransferDay()
+        );
     }
     
     /**
-     * 자동이체 스케줄 업데이트
+     * UpdateResponse 생성
      */
-    private void updateAutoTransferSchedule(Account moneyBoxAccount, Member member, 
-                                          java.math.BigDecimal monthlyAmount, Integer transferDay) {
-        try {
-            // 사용자의 주계좌 조회 (출금 계좌)
-            Account mainAccount = accountRepository.findByMemberAndAccountTypeAndDeletedFalse(member, AccountType.MAIN)
-                    .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
-            
-            // 기존 자동이체 스케줄 조회
-            Optional<AutoTransferSchedule> existingSchedule = autoTransferScheduleRepository
-                    .findByFromAccountAndToAccountAndActiveTrueAndDeletedFalse(mainAccount, moneyBoxAccount);
-            
-            if (existingSchedule.isPresent()) {
-                // 기존 스케줄 업데이트
-                AutoTransferSchedule schedule = existingSchedule.get();
-                
-                if (monthlyAmount != null) {
-                    schedule.setAmount(monthlyAmount);
-                    log.info("자동이체 금액 수정: accountId={}, newAmount={}", moneyBoxAccount.getId(), monthlyAmount);
-                }
-                
-                if (transferDay != null) {
-                    schedule.setTransferDay(transferDay);
-                    log.info("자동이체 날짜 수정: accountId={}, newTransferDay={}일", moneyBoxAccount.getId(), transferDay);
-                }
-                
-                autoTransferScheduleRepository.save(schedule);
-                log.info("자동이체 스케줄 업데이트 완료: scheduleId={}", schedule.getId());
-                
-            } else if (monthlyAmount != null && transferDay != null) {
-                // 기존 스케줄이 없고 두 값이 모두 제공된 경우 새로 생성
-                AutoTransferSchedule newSchedule = AutoTransferSchedule.builder()
-                        .fromAccount(mainAccount)
-                        .toAccount(moneyBoxAccount)
-                        .amount(monthlyAmount)
-                        .transferDay(transferDay)
-                        .active(true)
-                        .deleted(false)
-                        .build();
-                
-                autoTransferScheduleRepository.save(newSchedule);
-                log.info("새 자동이체 스케줄 생성 완료: accountId={}, monthlyAmount={}, transferDay={}일", 
-                        moneyBoxAccount.getId(), monthlyAmount, transferDay);
-            } else {
-                log.warn("자동이체 스케줄이 없고 필수 정보가 부족하여 생성하지 않음: accountId={}", moneyBoxAccount.getId());
-            }
-            
-        } catch (Exception e) {
-            log.warn("자동이체 스케줄 업데이트 실패: accountId={}, error={}", moneyBoxAccount.getId(), e.getMessage());
-            // 자동이체 업데이트 실패해도 머니박스 수정은 성공으로 처리
-        }
+    private MoneyBoxUpdateResponse createUpdateResponse(Account account, Member member) {
+        LocalDate today = LocalDate.now();
+        
+        // 주계좌 조회
+        Account mainAccount = accountRepository.findByMemberAndAccountTypeAndDeletedFalse(member, AccountType.MAIN)
+                .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
+        
+        // 현재 활성 스케줄과 미래 스케줄 조회
+        Optional<AutoTransferSchedule> currentSchedule = autoTransferScheduleService.getCurrentSchedule(mainAccount, account);
+        List<AutoTransferSchedule> futureSchedules = autoTransferScheduleService.getFutureSchedules(mainAccount, account);
+        
+        return MoneyBoxUpdateResponse.of(account, currentSchedule, futureSchedules);
+    }
+    
+    /**
+     * 계좌 비밀번호 검증
+     */
+    private void validateAccountPassword(Member member, String password) {
+        // 주계좌 조회 (자동이체는 주계좌에서 출금)
+        Account mainAccount = accountRepository.findByMemberAndAccountTypeAndDeletedFalse(member, AccountType.MAIN)
+                .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
+        
+        // AccountService를 통한 비밀번호 검증
+        accountService.validateAccountPassword(mainAccount.getId(), password);
+        
+        log.info("머니박스 수정을 위한 비밀번호 검증 완료: memberId={}, mainAccountId={}", 
+                member.getId(), mainAccount.getId());
     }
 }

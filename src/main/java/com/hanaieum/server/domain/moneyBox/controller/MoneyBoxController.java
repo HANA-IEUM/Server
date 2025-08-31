@@ -2,7 +2,8 @@ package com.hanaieum.server.domain.moneyBox.controller;
 
 import com.hanaieum.server.common.dto.ApiResponse;
 import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxFillRequest;
-import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxRequest;
+import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxUpdateRequest;
+import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxUpdateResponse;
 import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxResponse;
 import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxInfoResponse;
 import com.hanaieum.server.domain.moneyBox.service.MoneyBoxService;
@@ -31,8 +32,8 @@ public class MoneyBoxController {
     private final TransferService transferService;
     
     @Operation(summary = "머니박스 정보 수정", 
-               description = "머니박스의 별명, 월 납입금액, 자동이체 날짜를 수정합니다. " +
-                           "연결된 계좌 이름도 함께 변경되며, 자동이체 스케줄이 있는 경우 함께 업데이트됩니다.")
+               description = "머니박스의 별명과 자동이체 설정을 수정합니다. " +
+                           "자동이체 설정 변경 시 다음달부터 적용됩니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "머니박스 설정 수정 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청 데이터"),
@@ -41,13 +42,14 @@ public class MoneyBoxController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "머니박스를 찾을 수 없음")
     })
     @PatchMapping("/{accountId}")
-    public ResponseEntity<ApiResponse<MoneyBoxResponse>> updateMoneyBoxName(
+    public ResponseEntity<ApiResponse<MoneyBoxUpdateResponse>> updateMoneyBox(
             @PathVariable Long accountId,
-            @Valid @RequestBody MoneyBoxRequest request) {
+            @Valid @RequestBody MoneyBoxUpdateRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
         log.info("머니박스 정보 수정 API 호출: accountId = {}, boxName = {}, monthlyAmount = {}, transferDay = {}", 
-                accountId, request.getBoxName(), request.getMonthlyAmount(), request.getTransferDay());
+                accountId, request.getBoxName(), request.getAutoTransferEnabled(), request.getMonthlyAmount(), request.getTransferDay());
         
-        MoneyBoxResponse response = moneyBoxService.updateMoneyBoxName(accountId, request);
+        MoneyBoxUpdateResponse response = moneyBoxService.updateMoneyBox(userDetails.getMember(), accountId, request);
         
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
@@ -58,10 +60,11 @@ public class MoneyBoxController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패")
     })
     @GetMapping
-    public ResponseEntity<ApiResponse<List<MoneyBoxResponse>>> getMyMoneyBoxList() {
+    public ResponseEntity<ApiResponse<List<MoneyBoxResponse>>> getMyMoneyBoxList(
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
         log.info("내 머니박스 목록 조회 API 호출");
         
-        List<MoneyBoxResponse> response = moneyBoxService.getMyMoneyBoxList();
+        List<MoneyBoxResponse> response = moneyBoxService.getMyMoneyBoxList(userDetails.getMember());
         
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
@@ -96,10 +99,30 @@ public class MoneyBoxController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "머니박스를 찾을 수 없음")
     })
     @GetMapping("/{boxId}/info")
-    public ResponseEntity<ApiResponse<MoneyBoxInfoResponse>> getMoneyBoxInfo(@PathVariable Long boxId) {
+    public ResponseEntity<ApiResponse<MoneyBoxInfoResponse>> getMoneyBoxInfo(
+            @PathVariable Long boxId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
         log.info("머니박스 정보 조회 API 호출: boxId = {}", boxId);
         
-        MoneyBoxInfoResponse response = moneyBoxService.getMoneyBoxInfo(boxId);
+        MoneyBoxInfoResponse response = moneyBoxService.getMoneyBoxInfo(userDetails.getMember(), boxId);
+        
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+    
+    @Operation(summary = "머니박스 수정 폼 데이터 조회", description = "머니박스 수정 화면에 필요한 현재 설정 정보를 조회합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "수정 폼 데이터 조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "접근 권한 없음"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "머니박스를 찾을 수 없음")
+    })
+    @GetMapping("/{boxId}/edit")
+    public ResponseEntity<ApiResponse<MoneyBoxUpdateResponse>> getMoneyBoxForEdit(
+            @PathVariable Long boxId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        log.info("머니박스 수정 폼 데이터 조회 API 호출: boxId = {}", boxId);
+        
+        MoneyBoxUpdateResponse response = moneyBoxService.getMoneyBoxForEdit(userDetails.getMember(), boxId);
         
         return ResponseEntity.ok(ApiResponse.ok(response));
     }

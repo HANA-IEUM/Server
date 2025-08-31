@@ -17,7 +17,7 @@ public interface AccountService {
     Long createMainAccount(Member member); // 연계 실행, 회원가입 -> 계좌 생성(동일 트랜잭션)
     
     // === 머니박스 계좌 생성 메서드 ===
-    Account createMoneyBoxAccount(Member member, String boxName); // 연계 실행용 (버킷리스트→머니박스 연계)
+    Account createMoneyBoxAccount(Member member, String boxName, String password); // 연계 실행용 (버킷리스트→머니박스 연계)
     
     // === 버킷리스트 연동 머니박스 생성 메서드 ===
     Account createMoneyBoxForBucketList(BucketList bucketList, Member member, String boxName);
