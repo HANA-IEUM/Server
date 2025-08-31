@@ -6,8 +6,7 @@ import com.hanaieum.server.domain.account.dto.MainAccountResponse;
 import com.hanaieum.server.domain.account.entity.Account;
 import com.hanaieum.server.domain.account.entity.AccountType;
 import com.hanaieum.server.domain.account.repository.AccountRepository;
-import com.hanaieum.server.domain.autoTransfer.entity.AutoTransferSchedule;
-import com.hanaieum.server.domain.autoTransfer.repository.AutoTransferScheduleRepository;
+import com.hanaieum.server.domain.autoTransfer.service.AutoTransferScheduleService;
 import com.hanaieum.server.domain.member.entity.Member;
 import com.hanaieum.server.domain.member.repository.MemberRepository;
 import com.hanaieum.server.domain.bucketList.entity.BucketList;
@@ -31,7 +30,7 @@ public class AccountServiceImpl implements AccountService {
     private final AccountRepository accountRepository;
     private final MemberRepository memberRepository;
     private final PasswordEncoder passwordEncoder;
-    private final AutoTransferScheduleRepository autoTransferScheduleRepository;
+    private final AutoTransferScheduleService autoTransferScheduleService;
     
     @Override
     public Long createAccount(Member member, String accountName, String bankName, AccountType accountType, BigDecimal balance, String password) {
@@ -76,10 +75,10 @@ public class AccountServiceImpl implements AccountService {
     }
     
     @Override
-    public Account createMoneyBoxAccount(Member member, String boxName) {
-        // 머니박스 계좌 생성 - 잔액 0원, 비밀번호 1234
+    public Account createMoneyBoxAccount(Member member, String boxName, String password) {
+        // 머니박스 계좌 생성 - 잔액 0원
         String accountNumber = generateUniqueAccountNumber(AccountType.MONEY_BOX);
-        String encodedAccountPassword = passwordEncoder.encode("1234");
+        String encodedAccountPassword = passwordEncoder.encode(password);
         
         Account account = Account.builder()
                 .member(member)
@@ -105,8 +104,8 @@ public class AccountServiceImpl implements AccountService {
         // boxName이 없으면 버킷리스트 제목 사용
         String finalBoxName = (boxName != null && !boxName.trim().isEmpty()) ? boxName : bucketList.getTitle();
         
-        // 머니박스 계좌 생성
-        Account account = createMoneyBoxAccount(member, finalBoxName);
+        // 머니박스 계좌 생성 (기본 비밀번호: 1234)
+        Account account = createMoneyBoxAccount(member, finalBoxName, "1234");
         
         // BucketList와 Account 양방향 연결
         bucketList.setMoneyBoxAccount(account);
@@ -123,30 +122,21 @@ public class AccountServiceImpl implements AccountService {
         // boxName이 없으면 버킷리스트 제목 사용
         String finalBoxName = (boxName != null && !boxName.trim().isEmpty()) ? boxName : bucketList.getTitle();
         
-        // 머니박스 계좌 생성
-        Account account = createMoneyBoxAccount(member, finalBoxName);
+        // 머니박스 계좌 생성 (기본 비밀번호: 1234)
+        Account account = createMoneyBoxAccount(member, finalBoxName, "1234");
         
         // BucketList와 Account 양방향 연결
         bucketList.setMoneyBoxAccount(account);
         
-        // 자동이체 활성화된 경우 스케줄 생성
+        // 자동이체 활성화된 경우 스케줄 생성 (AutoTransferScheduleService 사용)
         if (Boolean.TRUE.equals(enableAutoTransfer) && monthlyAmount != null && transferDay != null) {
             try {
                 // 사용자의 주계좌 조회 (출금 계좌로 사용)
                 Account mainAccount = accountRepository.findByMemberAndAccountTypeAndDeletedFalse(member, AccountType.MAIN)
                         .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
                 
-                // 자동이체 스케줄 생성
-                AutoTransferSchedule autoTransferSchedule = AutoTransferSchedule.builder()
-                        .fromAccount(mainAccount)
-                        .toAccount(account)
-                        .amount(monthlyAmount)
-                        .transferDay(transferDay)
-                        .active(true)
-                        .deleted(false)
-                        .build();
-                
-                autoTransferScheduleRepository.save(autoTransferSchedule);
+                // AutoTransferScheduleService를 통한 스케줄 생성 (다음달부터 시작)
+                autoTransferScheduleService.createSchedule(mainAccount, account, monthlyAmount, transferDay);
                 
                 log.info("버킷리스트 머니박스 자동이체 스케줄 생성 완료 - 버킷리스트 ID: {}, 계좌 ID: {}, 월 납입금: {}, 이체일: {}일", 
                         bucketList.getId(), account.getId(), monthlyAmount, transferDay);

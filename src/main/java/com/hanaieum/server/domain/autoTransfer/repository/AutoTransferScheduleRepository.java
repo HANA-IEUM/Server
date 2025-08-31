@@ -6,20 +6,37 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
 public interface AutoTransferScheduleRepository extends JpaRepository<AutoTransferSchedule, Long> {
     
     /**
-     * 출금계좌와 입금계좌로 자동이체 스케줄 조회
+     * 특정 날짜에 유효한 활성 스케줄 조회 (History 방식)
      */
-    Optional<AutoTransferSchedule> findByFromAccountAndToAccountAndActiveTrueAndDeletedFalse(
-            Account fromAccount, Account toAccount);
+    @Query("SELECT ats FROM AutoTransferSchedule ats WHERE " +
+           "ats.fromAccount = :fromAccount AND ats.toAccount = :toAccount AND " +
+           "ats.validFrom <= :date AND (ats.validTo IS NULL OR ats.validTo >= :date) AND " +
+           "ats.active = true AND ats.deleted = false")
+    Optional<AutoTransferSchedule> findActiveSchedule(
+        @Param("fromAccount") Account fromAccount,
+        @Param("toAccount") Account toAccount, 
+        @Param("date") LocalDate date);
     
     /**
-     * 특정 이체일에 실행될 자동이체 스케줄 조회
+     * 특정 날짜 이후 시작되는 미래 스케줄 조회
      */
-    @Query("SELECT ats FROM AutoTransferSchedule ats WHERE ats.transferDay = :transferDay AND ats.active = true AND ats.deleted = false")
-    List<AutoTransferSchedule> findByTransferDayAndActive(@Param("transferDay") Integer transferDay);
+    @Query("SELECT ats FROM AutoTransferSchedule ats WHERE " +
+           "ats.fromAccount = :fromAccount AND ats.toAccount = :toAccount AND " +
+           "ats.validFrom > :date AND ats.active = true AND ats.deleted = false " +
+           "ORDER BY ats.validFrom ASC")
+    List<AutoTransferSchedule> findFutureSchedules(
+        @Param("fromAccount") Account fromAccount,
+        @Param("toAccount") Account toAccount,
+        @Param("date") LocalDate date);
+    
+    /**
+     * 특정 이체일에 실행될 자동이체 스케줄 조회 (배치 처리용) - 추후작성
+     */
 }
