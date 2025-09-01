@@ -1,6 +1,7 @@
 package com.hanaieum.server.domain.bucketList.dto;
 
 import com.hanaieum.server.domain.bucketList.entity.BucketList;
+import com.hanaieum.server.domain.bucketList.entity.BucketListStatus;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -17,6 +18,8 @@ public class BucketListDetailResponse {
     private BigDecimal targetAmount; // 목표금액
     private LocalDate targetDate; // 목표기간 종료날짜
     private boolean togetherFlag; // 혼자/같이 여부 (true: 같이, false: 혼자)
+    private BucketListStatus status; // 버킷리스트 상태
+    private boolean isCompletedButtonEnabled; // 달성완료 버튼 활성화 여부
     private MoneyBoxInfo moneyBoxInfo; // 머니박스 정보
 
     public static BucketListDetailResponse of(BucketList bucketList) {
@@ -36,13 +39,18 @@ public class BucketListDetailResponse {
                     .build();
         }
 
-        return BucketListDetailResponse.builder()
-                .title(bucketList.getTitle())
-                .targetAmount(bucketList.getTargetAmount())
-                .targetDate(bucketList.getTargetDate())
-                .togetherFlag(bucketList.isShareFlag())
-                .moneyBoxInfo(moneyBoxInfo)
-                .build();
+        // 달성완료 버튼 활성화 여부 결정
+        boolean isCompletedButtonEnabled = bucketList.getStatus() == BucketListStatus.COMPLETED;
+
+        return new BucketListDetailResponse(
+                bucketList.getTitle(),
+                bucketList.getTargetAmount(),
+                bucketList.getTargetDate(),
+                bucketList.isShareFlag(),
+                bucketList.getStatus(),
+                isCompletedButtonEnabled,
+                moneyBoxInfo
+        );
     }
 
     @Getter

@@ -5,6 +5,7 @@ import com.hanaieum.server.domain.bucketList.dto.BucketListRequest;
 import com.hanaieum.server.domain.bucketList.dto.BucketListResponse;
 import com.hanaieum.server.domain.bucketList.dto.BucketListUpdateRequest;
 import com.hanaieum.server.domain.bucketList.dto.BucketListDetailResponse;
+import com.hanaieum.server.domain.bucketList.entity.BucketListStatus;
 import com.hanaieum.server.domain.bucketList.service.BucketListService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -43,33 +44,17 @@ public class BucketListController {
                 .body(ApiResponse.created(response));
     }
 
-    @Operation(summary = "버킷리스트 목록 조회", description = "사용자의 버킷리스트 목록을 조회합니다.")
+    @Operation(summary = "분류별 버킷리스트 목록 조회", description = "카테고리별로 버킷리스트 목록을 조회합니다. (all: 전체, in_progress: 진행중, completed: 종료, participating: 참여)")
     @ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "버킷리스트 목록 조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "분류별 버킷리스트 목록 조회 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "회원을 찾을 수 없음")
     })
-    @GetMapping
-    public ResponseEntity<ApiResponse<List<BucketListResponse>>> getBucketLists() {
-        log.info("버킷리스트 목록 조회 API 호출");
+    @GetMapping("/category/{category}")
+    public ResponseEntity<ApiResponse<List<BucketListResponse>>> getBucketListsByCategory(@PathVariable String category) {
+        log.info("분류별 버킷리스트 목록 조회 API 호출: {}", category);
 
-        // 서비스 호출
-        List<BucketListResponse> bucketLists = bucketListService.getBucketLists();
-
-        return ResponseEntity.ok(ApiResponse.ok(bucketLists));
-    }
-
-    @Operation(summary = "내가 참여한 버킷리스트 목록 조회", description = "내가 구성원으로 참여한 버킷리스트 목록을 조회합니다.")
-    @ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "참여한 버킷리스트 목록 조회 성공"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "회원을 찾을 수 없음")
-    })
-    @GetMapping("/participating")
-    public ResponseEntity<ApiResponse<List<BucketListResponse>>> getParticipatingBucketLists() {
-        log.info("내가 참여한 버킷리스트 목록 조회 API 호출");
-
-        List<BucketListResponse> bucketLists = bucketListService.getParticipatingBucketLists();
+        List<BucketListResponse> bucketLists = bucketListService.getBucketListsByCategory(category);
 
         return ResponseEntity.ok(ApiResponse.ok(bucketLists));
     }
@@ -148,6 +133,24 @@ public class BucketListController {
         log.info("버킷리스트 상세 조회 API 호출: {}", bucketListId);
         
         BucketListDetailResponse response = bucketListService.getBucketListDetail(bucketListId);
+        
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    @Operation(summary = "버킷리스트 상태 변경", description = "버킷리스트의 상태를 변경합니다. (IN_PROGRESS: 진행중, COMPLETED: 완료)")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "버킷리스트 상태 변경 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "접근 권한 없음"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "버킷리스트를 찾을 수 없음")
+    })
+    @PatchMapping("/{bucketListId}/status")
+    public ResponseEntity<ApiResponse<BucketListResponse>> updateBucketListStatus(
+            @PathVariable Long bucketListId,
+            @RequestParam BucketListStatus status) {
+        log.info("버킷리스트 상태 변경 API 호출: {} -> {}", bucketListId, status);
+        
+        BucketListResponse response = bucketListService.updateBucketListStatus(bucketListId, status);
         
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
