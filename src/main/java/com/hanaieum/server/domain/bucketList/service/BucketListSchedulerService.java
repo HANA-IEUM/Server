@@ -20,10 +20,10 @@ public class BucketListSchedulerService {
     private final BucketListRepository bucketListRepository;
     
     /**
-     * 매일 자정에 목표날짜가 지난 버킷리스트를 완료 상태로 변경
-     * 매일 00:00에 실행
+     * 매일 오전 9시에 목표날짜가 지난 버킷리스트를 완료 상태로 변경
+     * 매일 08:00에 실행
      */
-    @Scheduled(cron = "0 0 0 * * *")
+    @Scheduled(cron = "0 0 8 * * *")
     @Transactional
     public void updateExpiredBucketListsToCompleted() {
         long startTime = System.currentTimeMillis();
