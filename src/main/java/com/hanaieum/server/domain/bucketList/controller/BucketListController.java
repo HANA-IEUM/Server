@@ -1,11 +1,7 @@
 package com.hanaieum.server.domain.bucketList.controller;
 
 import com.hanaieum.server.common.dto.ApiResponse;
-import com.hanaieum.server.domain.bucketList.dto.BucketListRequest;
-import com.hanaieum.server.domain.bucketList.dto.BucketListResponse;
-import com.hanaieum.server.domain.bucketList.dto.BucketListUpdateRequest;
-import com.hanaieum.server.domain.bucketList.dto.BucketListDetailResponse;
-import com.hanaieum.server.domain.bucketList.dto.BucketListCreationAvailabilityResponse;
+import com.hanaieum.server.domain.bucketList.dto.*;
 import com.hanaieum.server.domain.bucketList.entity.BucketListStatus;
 import com.hanaieum.server.domain.bucketList.service.BucketListService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -23,7 +19,7 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequestMapping("/api/bucket-lists")
-@Tag(name="Bucket list API", description = "버킷리스트 관련 API")
+@Tag(name = "Bucket list API", description = "버킷리스트 관련 API")
 @RequiredArgsConstructor
 public class BucketListController {
 
@@ -129,9 +125,9 @@ public class BucketListController {
     @GetMapping("/group/{bucketListId}")
     public ResponseEntity<ApiResponse<BucketListResponse>> getGroupMemberBucketList(@PathVariable Long bucketListId) {
         log.info("그룹원의 특정 버킷리스트 상세 조회 API 호출: {}", bucketListId);
-        
+
         BucketListResponse response = bucketListService.getGroupMemberBucketList(bucketListId);
-        
+
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
@@ -145,9 +141,9 @@ public class BucketListController {
     @GetMapping("/group/member/{memberId}")
     public ResponseEntity<ApiResponse<List<BucketListResponse>>> getSpecificGroupMemberBucketLists(@PathVariable Long memberId) {
         log.info("특정 그룹원의 버킷리스트 목록 조회 API 호출: 대상 멤버 ID = {}", memberId);
-        
+
         List<BucketListResponse> bucketLists = bucketListService.getSpecificGroupMemberBucketLists(memberId);
-        
+
         return ResponseEntity.ok(ApiResponse.ok(bucketLists));
     }
 
@@ -161,9 +157,9 @@ public class BucketListController {
     @GetMapping("/{bucketListId}")
     public ResponseEntity<ApiResponse<BucketListDetailResponse>> getBucketListDetail(@PathVariable Long bucketListId) {
         log.info("버킷리스트 상세 조회 API 호출: {}", bucketListId);
-        
+
         BucketListDetailResponse response = bucketListService.getBucketListDetail(bucketListId);
-        
+
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
@@ -179,9 +175,9 @@ public class BucketListController {
             @PathVariable Long bucketListId,
             @RequestParam BucketListStatus status) {
         log.info("버킷리스트 상태 변경 API 호출: {} -> {}", bucketListId, status);
-        
+
         BucketListResponse response = bucketListService.updateBucketListStatus(bucketListId, status);
-        
+
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
