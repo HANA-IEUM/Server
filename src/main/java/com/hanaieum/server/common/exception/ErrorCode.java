@@ -76,6 +76,7 @@ public enum ErrorCode {
     GROUP_NOT_FOUND("GROUP_001", "그룹을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     MEMBER_ALREADY_JOIN_GROUP("GROUP_002", "이미 참여한 그룹이 있습니다.", HttpStatus.CONFLICT),
     GROUP_FORBIDDEN("GROUP_003", "그룹원이 아닙니다.", HttpStatus.FORBIDDEN),
+    MEMBER_NOT_IN_SAME_GROUP("GROUP_004", "같은 그룹에 속한 멤버가 아닙니다.", HttpStatus.FORBIDDEN),
 
     // 앨범 관련 에러
     EMPTY_FILE("PHOTO_001", "빈 파일입니다.", HttpStatus.BAD_REQUEST),

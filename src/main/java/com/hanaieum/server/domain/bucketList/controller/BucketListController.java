@@ -91,20 +91,20 @@ public class BucketListController {
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
-    @Operation(summary = "그룹원들의 공개 버킷리스트 목록 조회", description = "같은 그룹에 속한 멤버들의 공개 버킷리스트 목록을 조회합니다.")
-    @ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "그룹원 버킷리스트 목록 조회 성공"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "그룹을 찾을 수 없음")
-    })
-    @GetMapping("/group")
-    public ResponseEntity<ApiResponse<List<BucketListResponse>>> getGroupMembersBucketLists() {
-        log.info("그룹원들의 공개 버킷리스트 목록 조회 API 호출");
-        
-        List<BucketListResponse> bucketLists = bucketListService.getGroupMembersBucketLists();
-        
-        return ResponseEntity.ok(ApiResponse.ok(bucketLists));
-    }
+//    @Operation(summary = "그룹원들의 공개 버킷리스트 목록 조회", description = "같은 그룹에 속한 멤버들의 공개 버킷리스트 목록을 조회합니다.")
+//    @ApiResponses({
+//            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "그룹원 버킷리스트 목록 조회 성공"),
+//            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
+//            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "그룹을 찾을 수 없음")
+//    })
+//    @GetMapping("/group")
+//    public ResponseEntity<ApiResponse<List<BucketListResponse>>> getGroupMembersBucketLists() {
+//        log.info("그룹원들의 공개 버킷리스트 목록 조회 API 호출");
+//
+//        List<BucketListResponse> bucketLists = bucketListService.getGroupMembersBucketLists();
+//
+//        return ResponseEntity.ok(ApiResponse.ok(bucketLists));
+//    }
 
     @Operation(summary = "그룹원의 특정 버킷리스트 상세 조회", description = "같은 그룹에 속한 멤버의 특정 공개 버킷리스트를 상세 조회합니다.")
     @ApiResponses({
@@ -119,6 +119,22 @@ public class BucketListController {
         BucketListResponse response = bucketListService.getGroupMemberBucketList(bucketListId);
         
         return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    @Operation(summary = "특정 그룹원의 버킷리스트 목록 조회", description = "지정된 그룹원의 공개 버킷리스트 목록을 조회합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "특정 그룹원 버킷리스트 목록 조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "같은 그룹에 속하지 않음"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "그룹 또는 멤버를 찾을 수 없음")
+    })
+    @GetMapping("/group/member/{memberId}")
+    public ResponseEntity<ApiResponse<List<BucketListResponse>>> getSpecificGroupMemberBucketLists(@PathVariable Long memberId) {
+        log.info("특정 그룹원의 버킷리스트 목록 조회 API 호출: 대상 멤버 ID = {}", memberId);
+        
+        List<BucketListResponse> bucketLists = bucketListService.getSpecificGroupMemberBucketLists(memberId);
+        
+        return ResponseEntity.ok(ApiResponse.ok(bucketLists));
     }
 
     @Operation(summary = "버킷리스트 상세 조회", description = "지정된 버킷리스트의 상세 정보를 조회합니다. 버킷리스트 이름, 목표금액, 목표기간 종료날짜 등을 포함합니다.")

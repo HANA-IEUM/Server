@@ -40,7 +40,6 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/auth/register",    // 회원가입
-                                "/api/auth/check-phone", // 전화번호 중복 확인
                                 "/api/auth/login",       // 로그인
                                 "/api/auth/refresh",     // 토큰 갱신
                                 "/api/auth/verify",      // 인증번호 확인
@@ -54,7 +53,7 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
-    }
+    } 
 
     @Bean
     public PasswordEncoder passwordEncoder() {

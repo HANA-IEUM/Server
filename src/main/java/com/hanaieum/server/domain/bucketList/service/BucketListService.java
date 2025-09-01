@@ -18,11 +18,14 @@ public interface BucketListService {
 
     void deleteBucketList(Long bucketListId);
     
-    // 그룹원들의 공개 버킷리스트 목록 조회
-    List<BucketListResponse> getGroupMembersBucketLists();
+//    // 그룹원들의 공개 버킷리스트 목록 조회
+//    List<BucketListResponse> getGroupMembersBucketLists();
     
     // 특정 그룹원의 특정 버킷리스트 상세 조회
     BucketListResponse getGroupMemberBucketList(Long bucketListId);
+    
+    // 특정 그룹원의 버킷리스트 목록 조회
+    List<BucketListResponse> getSpecificGroupMemberBucketLists(Long memberId);
     
     // 본인의 버킷리스트 상세 조회
     BucketListDetailResponse getBucketListDetail(Long bucketListId);
