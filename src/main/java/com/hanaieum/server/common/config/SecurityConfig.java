@@ -44,6 +44,7 @@ public class SecurityConfig {
                                 "/api/auth/refresh",     // 토큰 갱신
                                 "/api/auth/verify",      // 인증번호 확인
                                 "/api/verification/**",  // 문자인증 (하위 경로 포함)
+                                "/api/admin/scheduler/**", // 스케줄러 관리 API (개발/테스트용)
                                 "/swagger-ui/**",        // Swagger UI
                                 "/v3/api-docs/**"        // OpenAPI 문서
                         ).permitAll()                      // 인증 없이 접근 가능한 URL

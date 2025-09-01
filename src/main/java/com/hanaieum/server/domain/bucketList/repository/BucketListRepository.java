@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -43,4 +44,14 @@ public interface BucketListRepository extends JpaRepository<BucketList, Long> {
            "WHERE p.member = :member AND p.isActive = true AND bl.deleted = false " +
            "ORDER BY bl.createdAt DESC")
     List<BucketList> findByParticipantMemberAndActiveOrderByCreatedAtDesc(@Param("member") Member member);
+    
+    // 스케줄러용 - 만료된 진행중 버킷리스트 조회
+    @Query("SELECT bl FROM BucketList bl " +
+           "WHERE bl.targetDate < :today AND bl.status = 'IN_PROGRESS' AND bl.deleted = false")
+    List<BucketList> findExpiredInProgressBucketLists(@Param("today") LocalDate today);
+    
+    // 특정 회원의 만료된 진행중 버킷리스트 조회
+    @Query("SELECT bl FROM BucketList bl " +
+           "WHERE bl.member.id = :memberId AND bl.targetDate < :today AND bl.status = 'IN_PROGRESS' AND bl.deleted = false")
+    List<BucketList> findExpiredInProgressBucketListsByMember(@Param("memberId") Long memberId, @Param("today") LocalDate today);
 }
