@@ -2,6 +2,8 @@ package com.hanaieum.server.domain.auth.controller;
 
 import com.hanaieum.server.common.dto.ApiResponse;
 import com.hanaieum.server.domain.auth.dto.LoginRequest;
+import com.hanaieum.server.domain.auth.dto.PhoneNumberCheckRequest;
+import com.hanaieum.server.domain.auth.dto.PhoneNumberCheckResponse;
 import com.hanaieum.server.domain.auth.dto.RefreshTokenRequest;
 import com.hanaieum.server.domain.auth.dto.SignupRequest;
 import com.hanaieum.server.domain.auth.dto.TokenResponse;
@@ -74,5 +76,17 @@ public class AuthController {
     public ResponseEntity<ApiResponse<TokenResponse>> refreshToken(@Valid @RequestBody RefreshTokenRequest refreshTokenRequest) {
         TokenResponse tokenResponse = authService.refreshToken(refreshTokenRequest);
         return ResponseEntity.ok(ApiResponse.ok(tokenResponse));
+    }
+
+    @Operation(summary = "전화번호 중복 확인", description = "회원가입 전 전화번호가 이미 등록되어 있는지 확인합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "중복 확인 완료"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 전화번호 형식")
+    })
+    @PostMapping("/check-phone")
+    public ResponseEntity<ApiResponse<PhoneNumberCheckResponse>> checkPhoneNumber(@Valid @RequestBody PhoneNumberCheckRequest request) {
+        boolean available = authService.isPhoneNumberAvailable(request.getPhoneNumber());
+        PhoneNumberCheckResponse response = new PhoneNumberCheckResponse(available);
+        return ResponseEntity.ok(ApiResponse.ok(response));
     }
 }
