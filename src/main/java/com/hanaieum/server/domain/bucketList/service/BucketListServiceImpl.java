@@ -3,14 +3,10 @@ package com.hanaieum.server.domain.bucketList.service;
 import com.hanaieum.server.common.exception.CustomException;
 import com.hanaieum.server.common.exception.ErrorCode;
 import com.hanaieum.server.domain.account.service.AccountService;
-import com.hanaieum.server.domain.bucketList.dto.BucketListRequest;
-import com.hanaieum.server.domain.bucketList.dto.BucketListResponse;
-import com.hanaieum.server.domain.bucketList.dto.BucketListUpdateRequest;
-import com.hanaieum.server.domain.bucketList.dto.BucketListDetailResponse;
-import com.hanaieum.server.domain.bucketList.dto.BucketListCreationAvailabilityResponse;
+import com.hanaieum.server.domain.bucketList.dto.*;
 import com.hanaieum.server.domain.bucketList.entity.BucketList;
-import com.hanaieum.server.domain.bucketList.entity.BucketListStatus;
 import com.hanaieum.server.domain.bucketList.entity.BucketListCategory;
+import com.hanaieum.server.domain.bucketList.entity.BucketListStatus;
 import com.hanaieum.server.domain.bucketList.entity.BucketParticipant;
 import com.hanaieum.server.domain.bucketList.repository.BucketListRepository;
 import com.hanaieum.server.domain.bucketList.repository.BucketParticipantRepository;
@@ -26,9 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 
 @Slf4j
 @Service
@@ -69,7 +63,7 @@ public class BucketListServiceImpl implements BucketListService {
     private BucketList getBucketListWithOwnershipValidation(Long bucketListId, Long memberId) {
         BucketList bucketList = bucketListRepository.findByIdAndDeletedWithParticipants(bucketListId, false)
                 .orElseThrow(() -> new CustomException(ErrorCode.BUCKET_LIST_NOT_FOUND));
-        
+
         validateBucketListOwnership(bucketList, memberId);
         return bucketList;
     }
@@ -148,16 +142,16 @@ public class BucketListServiceImpl implements BucketListService {
     @Override
     public List<BucketListResponse> getBucketListsByCategory(String category) {
         log.info("분류별 버킷리스트 목록 조회 요청: {}", category);
-        
+
         Member member = getCurrentMember();
-        
+
         // API 호출 시점에 해당 회원의 만료된 버킷리스트 상태 업데이트
         bucketListSchedulerService.updateExpiredBucketListsForMember(member.getId());
-        
+
         BucketListCategory bucketListCategory = BucketListCategory.fromString(category);
-        
+
         List<BucketList> bucketLists;
-        
+
         switch (bucketListCategory) {
             case ALL:
                 // 전체: 내가 생성한 버킷리스트만
@@ -179,9 +173,9 @@ public class BucketListServiceImpl implements BucketListService {
                 bucketLists = bucketListRepository.findByMemberAndDeletedOrderByCreatedAtDesc(member, false);
                 break;
         }
-        
+
         log.info("분류별 버킷리스트 조회 완료: 카테고리 = {}, 총 {}개", bucketListCategory.getDescription(), bucketLists.size());
-        
+
         // 참여한 버킷리스트의 경우 머니박스 정보 제외
         if (bucketListCategory == BucketListCategory.PARTICIPATING) {
             return bucketLists.stream()
@@ -508,16 +502,16 @@ public class BucketListServiceImpl implements BucketListService {
         bucketList.setStatus(status);
 
         BucketList savedBucketList = bucketListRepository.save(bucketList);
-        
-        log.info("버킷리스트 상태 변경 완료: ID = {}, {} -> {}", 
-            bucketListId, previousStatus, status);
+
+        log.info("버킷리스트 상태 변경 완료: ID = {}, {} -> {}",
+                bucketListId, previousStatus, status);
 
         return BucketListResponse.of(savedBucketList);
     }
-    
+
 
     /**
-     * 상태별 버킷리스트 조회 (내가 생성한 것만)
+     * 상태별 버킷리스트 조회
      */
     private List<BucketList> getBucketListsByStatus(Member member, BucketListStatus status) {
         return bucketListRepository.findByMemberAndDeletedOrderByCreatedAtDesc(member, false)
@@ -525,40 +519,19 @@ public class BucketListServiceImpl implements BucketListService {
                 .filter(bucketList -> bucketList.getStatus() == status)
                 .toList();
     }
-    
+
     /**
-     * 참여중인 버킷리스트 조회 - 원본 버킷리스트 ID 기반으로 중복 없이 조회
-     * (나 혼자 생성한 버킷리스트는 포함되지 않음)
+     * 참여중인 버킷리스트 조회 - 내가 참여자로 등록된 모든 버킷리스트들
      */
     private List<BucketList> getParticipatingBucketLists(Member member) {
         log.debug("참여중인 버킷리스트 조회 시작 - 멤버 ID: {}", member.getId());
-        
-        // 원본 버킷리스트 ID가 있는 버킷리스트들만 조회 (공동 버킷리스트 중 내가 참여한 것들)
-        List<BucketList> participatingBucketLists = bucketListRepository.findParticipatingBucketListsWithOriginalId(member);
-        
-        log.debug("원본 ID가 있는 참여중인 버킷리스트 수: {}", participatingBucketLists.size());
-        
-        // 원본 버킷리스트 ID별로 그룹핑하여 각 그룹에서 원본 버킷리스트만 반환
-        List<BucketList> originalBucketLists = participatingBucketLists.stream()
-                .collect(java.util.stream.Collectors.groupingBy(
-                    BucketList::getOriginalBucketListId,
-                    java.util.LinkedHashMap::new,
-                    java.util.stream.Collectors.toList()
-                ))
-                .entrySet()
-                .stream()
-                .map(entry -> {
-                    Long originalId = entry.getKey();
-                    // 원본 버킷리스트를 조회
-                    return bucketListRepository.findByIdAndDeletedFalse(originalId).orElse(null);
-                })
-                .filter(Objects::nonNull)
-                .sorted(Comparator.comparing(BucketList::getCreatedAt).reversed()) // 최신순 정렬
-                .toList();
-        
-        log.debug("최종 참여중인 원본 버킷리스트 수: {}", originalBucketLists.size());
-        
-        return originalBucketLists;
+
+        // 내가 참여자로 등록된 모든 버킷리스트 조회
+        List<BucketList> participatingBucketLists = bucketListRepository.findParticipatingBucketLists(member);
+
+        log.debug("참여자로 등록된 버킷리스트 수: {}", participatingBucketLists.size());
+
+        return participatingBucketLists;
     }
 
     @Override
@@ -566,17 +539,17 @@ public class BucketListServiceImpl implements BucketListService {
         log.info("버킷리스트 생성 가능 여부 확인 요청");
 
         Member member = getCurrentMember();
-        
+
         // 현재 사용자의 소프트 삭제되지 않은 머니박스 개수 조회
         long currentMoneyBoxCount = accountService.getMoneyBoxCountByMember(member);
-        
+
         // 최대 허용 개수 (20개)
         int maxLimit = 20;
         boolean canCreate = currentMoneyBoxCount < maxLimit;
-        
-        log.info("버킷리스트 생성 가능 여부 확인 완료: 현재 {}개, 최대 {}개, 생성가능 = {}", 
+
+        log.info("버킷리스트 생성 가능 여부 확인 완료: 현재 {}개, 최대 {}개, 생성가능 = {}",
                 currentMoneyBoxCount, maxLimit, canCreate);
-        
+
         return new BucketListCreationAvailabilityResponse(canCreate, currentMoneyBoxCount);
     }
 
