@@ -43,6 +43,7 @@ public enum ErrorCode {
     BUCKET_LIST_NOT_FOUND("BUCKET_LIST_001", "버킷리스트를 찾을 수 없습니다", HttpStatus.NOT_FOUND),
     BUCKET_LIST_ACCESS_DENIED("BUCKET_LIST_002", "버킷리스트에 접근할 권한이 없습니다", HttpStatus.FORBIDDEN),
     BUCKET_LIST_ALREADY_DELETED("BUCKET_LIST_003", "이미 삭제된 버킷리스트입니다", HttpStatus.BAD_REQUEST),
+    BUCKET_LIST_NOT_COMPLETED("BUCKET_LIST_004", "완료되지 않은 버킷리스트입니다", HttpStatus.CONFLICT),
 
     // 머니박스 관련 에러
     MONEY_BOX_SETTINGS_NOT_FOUND("MONEY_BOX_001", "머니박스 설정을 찾을 수 없습니다", HttpStatus.NOT_FOUND),
@@ -79,6 +80,9 @@ public enum ErrorCode {
     EMPTY_FILE("PHOTO_001", "빈 파일입니다.", HttpStatus.BAD_REQUEST),
     PHOTO_NOT_FOUND("PHOTO_002", "게시물을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     PHOTO_FORBIDDEN("PHOTO_003", "권한이 없습니다.", HttpStatus.FORBIDDEN),
+
+    // 쿠폰 관련 에러
+    COUPON_NOT_FOUND("COUPON_001", "쿠폰을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
 
     // 서버 에러
     INTERNAL_SERVER_ERROR("SERVER_001", "내부 서버 오류입니다", HttpStatus.INTERNAL_SERVER_ERROR);
