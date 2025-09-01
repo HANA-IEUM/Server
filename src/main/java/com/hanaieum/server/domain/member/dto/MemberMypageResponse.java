@@ -12,7 +12,7 @@ public class MemberMypageResponse {
     private String phoneNumber;
     private Integer monthlyLivingCost;
 
-    public static MemberMypageResponse from(Member member) {
+    public static MemberMypageResponse of(Member member) {
         return MemberMypageResponse.builder()
                 .name(member.getName())
                 .phoneNumber(member.getPhoneNumber())

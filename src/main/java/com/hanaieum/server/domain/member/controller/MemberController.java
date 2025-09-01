@@ -2,6 +2,7 @@ package com.hanaieum.server.domain.member.controller;
 
 import com.hanaieum.server.common.dto.ApiResponse;
 import com.hanaieum.server.domain.member.dto.MemberMypageResponse;
+import com.hanaieum.server.domain.member.dto.MonthlyLivingCostResponse;
 import com.hanaieum.server.domain.member.dto.MonthlyLivingCostUpdateRequest;
 import com.hanaieum.server.domain.member.service.MemberService;
 import com.hanaieum.server.security.CustomUserDetails;
@@ -46,6 +47,13 @@ public class MemberController {
     @GetMapping("/mypage")
     public ResponseEntity<ApiResponse<MemberMypageResponse>> getMypageInfo(@AuthenticationPrincipal CustomUserDetails userDetails) {
         MemberMypageResponse response = memberService.getMypageInfo(userDetails.getId());
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    @Operation(summary = "월 생활비 조회", description = "사용자의 월 생활비만 조회합니다.")
+    @GetMapping("/monthly-living-cost")
+    public ResponseEntity<ApiResponse<MonthlyLivingCostResponse>> getMonthlyLivingCost(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        MonthlyLivingCostResponse response = memberService.getMonthlyLivingCost(userDetails.getId());
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
