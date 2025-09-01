@@ -24,4 +24,7 @@ public interface BucketListService {
     
     // 본인의 버킷리스트 상세 조회
     BucketListDetailResponse getBucketListDetail(Long bucketListId);
+    
+    // 내가 참여한 버킷리스트 목록 조회 (구성원으로 참여한 버킷리스트)
+    List<BucketListResponse> getParticipatingBucketLists();
 }

@@ -37,19 +37,44 @@ public class BucketListServiceImpl implements BucketListService {
     private final MemberRepository memberRepository;
     private final AccountService accountService;
 
+    /**
+     * 현재 로그인한 사용자 정보를 가져오는 공통 메서드
+     */
+    private Member getCurrentMember() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        Long memberId = userDetails.getId();
+
+        return memberRepository.findById(memberId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
+    }
+
+    /**
+     * 버킷리스트 소유자 권한 확인 공통 메서드
+     */
+    private void validateBucketListOwnership(BucketList bucketList, Long memberId) {
+        if (!bucketList.getMember().getId().equals(memberId)) {
+            throw new CustomException(ErrorCode.BUCKET_LIST_ACCESS_DENIED);
+        }
+    }
+
+    /**
+     * 삭제되지 않은 버킷리스트 조회 (소유자 확인 포함)
+     */
+    private BucketList getBucketListWithOwnershipValidation(Long bucketListId, Long memberId) {
+        BucketList bucketList = bucketListRepository.findByIdAndDeletedWithParticipants(bucketListId, false)
+                .orElseThrow(() -> new CustomException(ErrorCode.BUCKET_LIST_NOT_FOUND));
+        
+        validateBucketListOwnership(bucketList, memberId);
+        return bucketList;
+    }
+
     @Override
     @Transactional
     public BucketListResponse createBucketList(BucketListRequest requestDto) {
         log.info("버킷리스트 생성 요청: {}", requestDto.getTitle());
 
-        // 현재 로그인한 사용자 정보 가져오기
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-        Long memberId = userDetails.getId();
-
-        // 회원 조회
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
+        Member member = getCurrentMember();
 
         // targetMonths를 현재 날짜에 더해서 targetDate 계산
         int months = Integer.parseInt(requestDto.getTargetMonths());
@@ -119,14 +144,7 @@ public class BucketListServiceImpl implements BucketListService {
     public List<BucketListResponse> getBucketLists() {
         log.info("버킷리스트 목록 조회 요청");
 
-        // 현재 로그인한 사용자 정보 가져오기
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-        Long memberId = userDetails.getId();
-
-        // 회원 조회
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
+        Member member = getCurrentMember();
 
         // 삭제되지 않은 해당 회원의 버킷리스트 조회 (생성일 기준 내림차순)
         List<BucketList> bucketLists = bucketListRepository.findByMemberAndDeletedOrderByCreatedAtDesc(member, false);
@@ -143,19 +161,8 @@ public class BucketListServiceImpl implements BucketListService {
     public void deleteBucketList(Long bucketListId) {
         log.info("버킷리스트 삭제 요청: {}", bucketListId);
 
-        // 현재 로그인한 사용자 정보 가져오기
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-        Long memberId = userDetails.getId();
-
-        // 삭제되지 않은 버킷리스트만 조회 (참여자 정보 포함)
-        BucketList bucketList = bucketListRepository.findByIdAndDeletedWithParticipants(bucketListId, false)
-                .orElseThrow(() -> new CustomException(ErrorCode.BUCKET_LIST_NOT_FOUND));
-
-        // 소유자 확인
-        if (!bucketList.getMember().getId().equals(memberId)) {
-            throw new CustomException(ErrorCode.BUCKET_LIST_ACCESS_DENIED);
-        }
+        Member member = getCurrentMember();
+        BucketList bucketList = getBucketListWithOwnershipValidation(bucketListId, member.getId());
 
         // 소프트 삭제 (deleted 플래그를 true로 변경)
         bucketList.setDeleted(true);
@@ -169,19 +176,8 @@ public class BucketListServiceImpl implements BucketListService {
     public BucketListResponse updateBucketList(Long bucketListId, BucketListUpdateRequest requestDto) {
         log.info("버킷리스트 수정 요청: {} - {}", bucketListId, requestDto.getTitle());
 
-        // 현재 로그인한 사용자 정보 가져오기
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-        Long memberId = userDetails.getId();
-
-        // 삭제되지 않은 버킷리스트만 조회 (참여자 정보 포함)
-        BucketList bucketList = bucketListRepository.findByIdAndDeletedWithParticipants(bucketListId, false)
-                .orElseThrow(() -> new CustomException(ErrorCode.BUCKET_LIST_NOT_FOUND));
-
-        // 소유자 확인
-        if (!bucketList.getMember().getId().equals(memberId)) {
-            throw new CustomException(ErrorCode.BUCKET_LIST_ACCESS_DENIED);
-        }
+        Member member = getCurrentMember();
+        BucketList bucketList = getBucketListWithOwnershipValidation(bucketListId, member.getId());
 
         // 제목 수정
         bucketList.setTitle(requestDto.getTitle());
@@ -226,14 +222,7 @@ public class BucketListServiceImpl implements BucketListService {
     public List<BucketListResponse> getGroupMembersBucketLists() {
         log.info("그룹원들의 공개 버킷리스트 목록 조회 요청");
 
-        // 현재 로그인한 사용자 정보 가져오기
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-        Long memberId = userDetails.getId();
-
-        // 회원 조회
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
+        Member member = getCurrentMember();
 
         // 그룹에 속해있는지 확인
         Group group = member.getGroup();
@@ -246,7 +235,7 @@ public class BucketListServiceImpl implements BucketListService {
 
         // 본인의 버킷리스트는 제외
         List<BucketList> otherMembersBucketLists = groupBucketLists.stream()
-                .filter(bucketList -> !bucketList.getMember().getId().equals(memberId))
+                .filter(bucketList -> !bucketList.getMember().getId().equals(member.getId()))
                 .toList();
 
         log.info("그룹원들의 공개 버킷리스트 조회 완료: 총 {}개", otherMembersBucketLists.size());
@@ -260,14 +249,7 @@ public class BucketListServiceImpl implements BucketListService {
     public BucketListResponse getGroupMemberBucketList(Long bucketListId) {
         log.info("그룹원의 특정 버킷리스트 조회 요청: {}", bucketListId);
 
-        // 현재 로그인한 사용자 정보 가져오기
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-        Long memberId = userDetails.getId();
-
-        // 회원 조회
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
+        Member member = getCurrentMember();
 
         // 그룹에 속해있는지 확인
         Group group = member.getGroup();
@@ -468,23 +450,28 @@ public class BucketListServiceImpl implements BucketListService {
     public BucketListDetailResponse getBucketListDetail(Long bucketListId) {
         log.info("버킷리스트 상세조회 요청: {}", bucketListId);
 
-        // 현재 로그인한 사용자 정보 가져오기
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-        Long memberId = userDetails.getId();
-
-        // 삭제되지 않은 버킷리스트만 조회 (참여자 정보 포함)
-        BucketList bucketList = bucketListRepository.findByIdAndDeletedWithParticipants(bucketListId, false)
-                .orElseThrow(() -> new CustomException(ErrorCode.BUCKET_LIST_NOT_FOUND));
-
-        // 소유자 확인 (본인의 버킷리스트만 조회 가능)
-        if (!bucketList.getMember().getId().equals(memberId)) {
-            throw new CustomException(ErrorCode.BUCKET_LIST_ACCESS_DENIED);
-        }
+        Member member = getCurrentMember();
+        BucketList bucketList = getBucketListWithOwnershipValidation(bucketListId, member.getId());
 
         log.info("버킷리스트 상세조회 완료: ID = {}, 제목 = {}", bucketListId, bucketList.getTitle());
 
         return BucketListDetailResponse.of(bucketList);
+    }
+
+    @Override
+    public List<BucketListResponse> getParticipatingBucketLists() {
+        log.info("내가 참여한 버킷리스트 목록 조회 요청");
+
+        Member member = getCurrentMember();
+
+        // 내가 참여자로 등록된 버킷리스트 조회 (활성화된 참여자만, 삭제되지 않은 버킷리스트만)
+        List<BucketList> participatingBucketLists = bucketListRepository.findByParticipantMemberAndActiveOrderByCreatedAtDesc(member);
+
+        log.info("내가 참여한 버킷리스트 목록 조회 완료: 총 {}개", participatingBucketLists.size());
+
+        return participatingBucketLists.stream()
+                .map(BucketListResponse::ofForParticipant)
+                .toList();
     }
 
 }

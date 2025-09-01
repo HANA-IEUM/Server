@@ -38,6 +38,20 @@ public class BucketListResponse {
     private MoneyBoxInfo moneyBoxInfo;
 
     public static BucketListResponse of(BucketList bucketList) {
+        return createBucketListResponse(bucketList, true);
+    }
+    
+    /**
+     * 참여자용 버킷리스트 응답 생성 (머니박스 정보 제외)
+     */
+    public static BucketListResponse ofForParticipant(BucketList bucketList) {
+        return createBucketListResponse(bucketList, false);
+    }
+    
+    /**
+     * 공통 버킷리스트 응답 생성 메서드
+     */
+    private static BucketListResponse createBucketListResponse(BucketList bucketList, boolean includeMoneyBoxInfo) {
         // 참여자 목록 생성 (활성화된 참여자만)
         List<BucketListParticipantDto> participants = bucketList.getParticipants().stream()
                 .filter(participant -> participant.getIsActive())
@@ -45,20 +59,7 @@ public class BucketListResponse {
                 .toList();
         
         // 머니박스 정보 생성
-        MoneyBoxInfo moneyBoxInfo = null;
-        if (bucketList.getMoneyBoxAccount() != null) {
-            moneyBoxInfo = MoneyBoxInfo.builder()
-                    .accountId(bucketList.getMoneyBoxAccount().getId())
-                    .boxName(bucketList.getMoneyBoxAccount().getBoxName())
-                    .accountNumber(bucketList.getMoneyBoxAccount().getNumber())
-                    .balance(bucketList.getMoneyBoxAccount().getBalance())
-                    .hasMoneyBox(true)
-                    .build();
-        } else {
-            moneyBoxInfo = MoneyBoxInfo.builder()
-                    .hasMoneyBox(false)
-                    .build();
-        }
+        MoneyBoxInfo moneyBoxInfo = createMoneyBoxInfo(bucketList, includeMoneyBoxInfo);
         
         return BucketListResponse.builder()
                 .id(bucketList.getId())
@@ -75,6 +76,31 @@ public class BucketListResponse {
                 .participants(participants)
                 .moneyBoxInfo(moneyBoxInfo)
                 .build();
+    }
+    
+    /**
+     * 머니박스 정보 생성 메서드
+     */
+    private static MoneyBoxInfo createMoneyBoxInfo(BucketList bucketList, boolean includeInfo) {
+        if (!includeInfo) {
+            return MoneyBoxInfo.builder()
+                    .hasMoneyBox(false)
+                    .build();
+        }
+        
+        if (bucketList.getMoneyBoxAccount() != null) {
+            return MoneyBoxInfo.builder()
+                    .accountId(bucketList.getMoneyBoxAccount().getId())
+                    .boxName(bucketList.getMoneyBoxAccount().getBoxName())
+                    .accountNumber(bucketList.getMoneyBoxAccount().getNumber())
+                    .balance(bucketList.getMoneyBoxAccount().getBalance())
+                    .hasMoneyBox(true)
+                    .build();
+        } else {
+            return MoneyBoxInfo.builder()
+                    .hasMoneyBox(false)
+                    .build();
+        }
     }
     
     @Getter

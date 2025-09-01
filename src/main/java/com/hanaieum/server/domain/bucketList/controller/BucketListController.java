@@ -59,6 +59,21 @@ public class BucketListController {
         return ResponseEntity.ok(ApiResponse.ok(bucketLists));
     }
 
+    @Operation(summary = "내가 참여한 버킷리스트 목록 조회", description = "내가 구성원으로 참여한 버킷리스트 목록을 조회합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "참여한 버킷리스트 목록 조회 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "회원을 찾을 수 없음")
+    })
+    @GetMapping("/participating")
+    public ResponseEntity<ApiResponse<List<BucketListResponse>>> getParticipatingBucketLists() {
+        log.info("내가 참여한 버킷리스트 목록 조회 API 호출");
+
+        List<BucketListResponse> bucketLists = bucketListService.getParticipatingBucketLists();
+
+        return ResponseEntity.ok(ApiResponse.ok(bucketLists));
+    }
+
     @Operation(summary = "버킷리스트 삭제", description = "지정된 버킷리스트를 삭제합니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "버킷리스트 삭제 성공"),

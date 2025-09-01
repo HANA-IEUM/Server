@@ -16,6 +16,7 @@ public class BucketListDetailResponse {
     private String title; // 버킷리스트 이름
     private BigDecimal targetAmount; // 목표금액
     private LocalDate targetDate; // 목표기간 종료날짜
+    private boolean togetherFlag; // 혼자/같이 여부 (true: 같이, false: 혼자)
     private MoneyBoxInfo moneyBoxInfo; // 머니박스 정보
 
     public static BucketListDetailResponse of(BucketList bucketList) {
@@ -39,6 +40,7 @@ public class BucketListDetailResponse {
                 .title(bucketList.getTitle())
                 .targetAmount(bucketList.getTargetAmount())
                 .targetDate(bucketList.getTargetDate())
+                .togetherFlag(bucketList.isShareFlag())
                 .moneyBoxInfo(moneyBoxInfo)
                 .build();
     }

@@ -53,7 +53,7 @@ public class BucketListRequest {
     @Positive(message = "월 납입금액은 0보다 커야 합니다.")
     private BigDecimal monthlyAmount; // 월 납입금액
     
-    @Pattern(regexp = "^(1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31)$", 
+    @Pattern(regexp = "^(01|1|02|2|03|3|04|4|05|5|6|06|7|07|8|08|9|09|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31)$",
              message = "이체일은 1일부터 31일 사이여야 합니다.")
     private String transferDay; // 이체일 (1-31일)
 }
