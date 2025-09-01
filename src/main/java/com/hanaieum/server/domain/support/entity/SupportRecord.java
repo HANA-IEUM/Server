@@ -44,4 +44,8 @@ public class SupportRecord extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "letter_color", length = 50)
     private LetterColor letterColor; // 편지지 색상(pink, green, blue)
+    
+    @Column(name = "is_deleted", nullable = false)
+    @Builder.Default
+    private boolean deleted = false; // 삭제 여부 (soft delete)
 }
