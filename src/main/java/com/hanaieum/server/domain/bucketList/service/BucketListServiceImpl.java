@@ -7,8 +7,10 @@ import com.hanaieum.server.domain.bucketList.dto.BucketListRequest;
 import com.hanaieum.server.domain.bucketList.dto.BucketListResponse;
 import com.hanaieum.server.domain.bucketList.dto.BucketListUpdateRequest;
 import com.hanaieum.server.domain.bucketList.dto.BucketListDetailResponse;
+import com.hanaieum.server.domain.bucketList.dto.BucketListCreationAvailabilityResponse;
 import com.hanaieum.server.domain.bucketList.entity.BucketList;
 import com.hanaieum.server.domain.bucketList.entity.BucketListStatus;
+import com.hanaieum.server.domain.bucketList.entity.BucketListCategory;
 import com.hanaieum.server.domain.bucketList.entity.BucketParticipant;
 import com.hanaieum.server.domain.bucketList.repository.BucketListRepository;
 import com.hanaieum.server.domain.bucketList.repository.BucketParticipantRepository;
@@ -24,7 +26,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 @Slf4j
 @Service
@@ -36,6 +40,7 @@ public class BucketListServiceImpl implements BucketListService {
     private final BucketParticipantRepository bucketParticipantRepository;
     private final MemberRepository memberRepository;
     private final AccountService accountService;
+    private final BucketListSchedulerService bucketListSchedulerService;
 
     /**
      * 현재 로그인한 사용자 정보를 가져오는 공통 메서드
@@ -132,7 +137,7 @@ public class BucketListServiceImpl implements BucketListService {
             }
         }
 
-        // 공동 버킷리스트인 경우 선택된 멤버들에게도 동일한 버킷리스트 생성
+        // 공동 버킷리스트인 경우 선택된 멤버들을 참여자로 등록하고, 각 멤버별로 개별 버킷리스트 생성
         if (requestDto.getTogetherFlag() && requestDto.getSelectedMemberIds() != null && !requestDto.getSelectedMemberIds().isEmpty()) {
             createSharedBucketLists(savedBucketList, requestDto.getSelectedMemberIds(), member, requestDto);
         }
@@ -141,19 +146,52 @@ public class BucketListServiceImpl implements BucketListService {
     }
 
     @Override
-    public List<BucketListResponse> getBucketLists() {
-        log.info("버킷리스트 목록 조회 요청");
-
+    public List<BucketListResponse> getBucketListsByCategory(String category) {
+        log.info("분류별 버킷리스트 목록 조회 요청: {}", category);
+        
         Member member = getCurrentMember();
-
-        // 삭제되지 않은 해당 회원의 버킷리스트 조회 (생성일 기준 내림차순)
-        List<BucketList> bucketLists = bucketListRepository.findByMemberAndDeletedOrderByCreatedAtDesc(member, false);
-
-        log.info("버킷리스트 목록 조회 완료: 총 {}개", bucketLists.size());
-
-        return bucketLists.stream()
-                .map(BucketListResponse::of)
-                .toList();
+        
+        // API 호출 시점에 해당 회원의 만료된 버킷리스트 상태 업데이트
+        bucketListSchedulerService.updateExpiredBucketListsForMember(member.getId());
+        
+        BucketListCategory bucketListCategory = BucketListCategory.fromString(category);
+        
+        List<BucketList> bucketLists;
+        
+        switch (bucketListCategory) {
+            case ALL:
+                // 전체: 내가 생성한 버킷리스트만
+                bucketLists = bucketListRepository.findByMemberAndDeletedOrderByCreatedAtDesc(member, false);
+                break;
+            case IN_PROGRESS:
+                // 진행중: 내가 생성한 버킷리스트 중 진행중인 것들
+                bucketLists = getBucketListsByStatus(member, BucketListStatus.IN_PROGRESS);
+                break;
+            case COMPLETED:
+                // 종료: 내가 생성한 버킷리스트 중 완료된 것들  
+                bucketLists = getBucketListsByStatus(member, BucketListStatus.COMPLETED);
+                break;
+            case PARTICIPATING:
+                // 참여중: 다른 그룹원이 생성하고 나를 구성원으로 지정한 버킷리스트들 (나 혼자 생성한 것 제외)
+                bucketLists = getParticipatingBucketLists(member);
+                break;
+            default:
+                bucketLists = bucketListRepository.findByMemberAndDeletedOrderByCreatedAtDesc(member, false);
+                break;
+        }
+        
+        log.info("분류별 버킷리스트 조회 완료: 카테고리 = {}, 총 {}개", bucketListCategory.getDescription(), bucketLists.size());
+        
+        // 참여한 버킷리스트의 경우 머니박스 정보 제외
+        if (bucketListCategory == BucketListCategory.PARTICIPATING) {
+            return bucketLists.stream()
+                    .map(BucketListResponse::ofForParticipant)
+                    .toList();
+        } else {
+            return bucketLists.stream()
+                    .map(BucketListResponse::of)
+                    .toList();
+        }
     }
 
     @Override
@@ -218,32 +256,32 @@ public class BucketListServiceImpl implements BucketListService {
         return BucketListResponse.of(savedBucketList);
     }
 
-    @Override
-    public List<BucketListResponse> getGroupMembersBucketLists() {
-        log.info("그룹원들의 공개 버킷리스트 목록 조회 요청");
-
-        Member member = getCurrentMember();
-
-        // 그룹에 속해있는지 확인
-        Group group = member.getGroup();
-        if (group == null) {
-            throw new CustomException(ErrorCode.GROUP_NOT_FOUND);
-        }
-
-        // 같은 그룹원들의 공개 버킷리스트 조회 (본인 제외)
-        List<BucketList> groupBucketLists = bucketListRepository.findByMemberGroupAndPublicOrderByCreatedAtDesc(group);
-
-        // 본인의 버킷리스트는 제외
-        List<BucketList> otherMembersBucketLists = groupBucketLists.stream()
-                .filter(bucketList -> !bucketList.getMember().getId().equals(member.getId()))
-                .toList();
-
-        log.info("그룹원들의 공개 버킷리스트 조회 완료: 총 {}개", otherMembersBucketLists.size());
-
-        return otherMembersBucketLists.stream()
-                .map(BucketListResponse::of)
-                .toList();
-    }
+//    @Override
+//    public List<BucketListResponse> getGroupMembersBucketLists() {
+//        log.info("그룹원들의 공개 버킷리스트 목록 조회 요청");
+//
+//        Member member = getCurrentMember();
+//
+//        // 그룹에 속해있는지 확인
+//        Group group = member.getGroup();
+//        if (group == null) {
+//            throw new CustomException(ErrorCode.GROUP_NOT_FOUND);
+//        }
+//
+//        // 같은 그룹원들의 공개 버킷리스트 조회 (본인 제외)
+//        List<BucketList> groupBucketLists = bucketListRepository.findByMemberGroupAndPublicOrderByCreatedAtDesc(group);
+//
+//        // 본인의 버킷리스트는 제외
+//        List<BucketList> otherMembersBucketLists = groupBucketLists.stream()
+//                .filter(bucketList -> !bucketList.getMember().getId().equals(member.getId()))
+//                .toList();
+//
+//        log.info("그룹원들의 공개 버킷리스트 조회 완료: 총 {}개", otherMembersBucketLists.size());
+//
+//        return otherMembersBucketLists.stream()
+//                .map(BucketListResponse::of)
+//                .toList();
+//    }
 
     @Override
     public BucketListResponse getGroupMemberBucketList(Long bucketListId) {
@@ -266,8 +304,40 @@ public class BucketListServiceImpl implements BucketListService {
         return BucketListResponse.of(bucketList);
     }
 
+    @Override
+    public List<BucketListResponse> getSpecificGroupMemberBucketLists(Long targetMemberId) {
+        log.info("특정 그룹원의 버킷리스트 목록 조회 요청: 대상 멤버 ID = {}", targetMemberId);
+
+        Member currentMember = getCurrentMember();
+
+        // 현재 사용자가 그룹에 속해있는지 확인
+        Group currentGroup = currentMember.getGroup();
+        if (currentGroup == null) {
+            throw new CustomException(ErrorCode.GROUP_NOT_FOUND);
+        }
+
+        // 대상 멤버 조회
+        Member targetMember = memberRepository.findById(targetMemberId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
+
+        // 대상 멤버가 같은 그룹에 속해있는지 확인
+        if (targetMember.getGroup() == null || !targetMember.getGroup().getId().equals(currentGroup.getId())) {
+            throw new CustomException(ErrorCode.MEMBER_NOT_IN_SAME_GROUP);
+        }
+
+        // 대상 멤버의 공개 버킷리스트 조회
+        List<BucketList> targetMemberBucketLists = bucketListRepository.findByMemberAndMemberGroupAndPublicOrderByCreatedAtDesc(targetMember, currentGroup);
+
+        log.info("특정 그룹원의 버킷리스트 조회 완료: 대상 멤버 = {}, 총 {}개", targetMember.getName(), targetMemberBucketLists.size());
+
+        return targetMemberBucketLists.stream()
+                .map(BucketListResponse::of)
+                .toList();
+    }
+
     /**
-     * 공동 버킷리스트 생성 - 선택된 멤버들에게 동일한 버킷리스트 생성
+     * 공동 버킷리스트 생성 - 생성자의 버킷리스트에 선택된 멤버들을 참여자로 등록하고,
+     * 각 구성원별로 개별 버킷리스트를 생성하여 원본 ID로 연결
      */
     @Transactional
     protected void createSharedBucketLists(BucketList originalBucketList, List<Long> selectedMemberIds, Member creator, BucketListRequest requestDto) {
@@ -295,76 +365,43 @@ public class BucketListServiceImpl implements BucketListService {
                 continue;
             }
 
-            // 해당 멤버에게 동일한 버킷리스트 생성
-            BucketList sharedBucketList = BucketList.builder()
+            // 1. 생성자의 원본 버킷리스트에 참여자로 등록
+            BucketParticipant participantInOriginal = BucketParticipant.builder()
+                    .bucketList(originalBucketList)
+                    .member(targetMember)
+                    .active(true)
+                    .build();
+            bucketParticipantRepository.save(participantInOriginal);
+
+            // 2. 해당 멤버를 위한 개별 버킷리스트 생성 (원본 ID 연결)
+            BucketList memberBucketList = BucketList.builder()
                     .member(targetMember)
                     .type(originalBucketList.getType())
                     .title(originalBucketList.getTitle())
                     .targetAmount(originalBucketList.getTargetAmount())
                     .targetDate(originalBucketList.getTargetDate())
                     .publicFlag(originalBucketList.isPublicFlag())
-                    .shareFlag(true) // 공동 버킷리스트이므로 항상 true
+                    .shareFlag(true) // 공동 버킷리스트
                     .status(BucketListStatus.IN_PROGRESS)
                     .deleted(false)
+                    .originalBucketListId(originalBucketList.getId()) // 원본 버킷리스트 ID 설정
                     .build();
 
-            BucketList savedSharedBucketList = bucketListRepository.save(sharedBucketList);
+            BucketList savedMemberBucketList = bucketListRepository.save(memberBucketList);
 
-            // 공동 버킷리스트에도 머니박스 자동 생성
-            try {
-                // 자동이체 정보가 있는 경우 자동이체 포함하여 생성
-                if (Boolean.TRUE.equals(requestDto.getEnableAutoTransfer()) &&
-                        requestDto.getMonthlyAmount() != null &&
-                        requestDto.getTransferDay() != null) {
-
-                    Integer transferDay = Integer.parseInt(requestDto.getTransferDay());
-                    accountService.createMoneyBoxForBucketList(
-                            savedSharedBucketList,
-                            targetMember,
-                            null, // 버킷리스트 제목 사용
-                            requestDto.getEnableAutoTransfer(),
-                            requestDto.getMonthlyAmount(),
-                            transferDay
-                    );
-                    log.info("공동 버킷리스트 머니박스 및 자동이체 생성 완료: bucketListId = {}, memberId = {}, monthlyAmount = {}, transferDay = {}일",
-                            savedSharedBucketList.getId(), targetMember.getId(), requestDto.getMonthlyAmount(), transferDay);
-                } else {
-                    // 기존 방식: 자동이체 없이 머니박스만 생성
-                    accountService.createMoneyBoxForBucketList(
-                            savedSharedBucketList,
-                            targetMember,
-                            null // 버킷리스트 제목 사용
-                    );
-                    log.info("공동 버킷리스트 머니박스 생성 완료: bucketListId = {}, memberId = {}",
-                            savedSharedBucketList.getId(), targetMember.getId());
-                }
-            } catch (Exception e) {
-                log.warn("공동 버킷리스트 머니박스 자동 생성 실패: bucketListId = {}, memberId = {}, error = {}",
-                        savedSharedBucketList.getId(), targetMember.getId(), e.getMessage());
-                // 머니박스 생성 실패해도 공동 버킷리스트 생성은 성공으로 처리
-            }
-
-            // 원본 버킷리스트에 참여자로 등록 (양방향 연결)
-            BucketParticipant originalParticipant = BucketParticipant.builder()
-                    .bucketList(originalBucketList)
-                    .member(targetMember)
-                    .isActive(true)
-                    .build();
-            bucketParticipantRepository.save(originalParticipant);
-
-            // 새로 생성된 버킷리스트에 원래 생성자를 참여자로 등록
-            BucketParticipant sharedParticipant = BucketParticipant.builder()
-                    .bucketList(savedSharedBucketList)
+            // 3. 생성자를 해당 멤버의 버킷리스트에 참여자로 등록
+            BucketParticipant creatorParticipant = BucketParticipant.builder()
+                    .bucketList(savedMemberBucketList)
                     .member(creator)
-                    .isActive(true)
+                    .active(true)
                     .build();
-            bucketParticipantRepository.save(sharedParticipant);
+            bucketParticipantRepository.save(creatorParticipant);
 
-            log.info("공동 버킷리스트 생성 완료 - 멤버: {}, 버킷리스트 ID: {}",
-                    targetMember.getName(), savedSharedBucketList.getId());
+            log.info("공동 버킷리스트 생성 완료 - 멤버: {}, 개별 버킷리스트 ID: {}, 원본 ID: {}",
+                    targetMember.getName(), savedMemberBucketList.getId(), originalBucketList.getId());
         }
 
-        log.info("공동 버킷리스트 생성 완료");
+        log.info("공동 버킷리스트 전체 생성 완료");
     }
 
     /**
@@ -383,9 +420,9 @@ public class BucketListServiceImpl implements BucketListService {
         }
 
         // 기존 참여자들을 모두 비활성화
-        List<BucketParticipant> existingParticipants = bucketParticipantRepository.findByBucketListAndIsActive(bucketList, true);
+        List<BucketParticipant> existingParticipants = bucketParticipantRepository.findByBucketListAndActive(bucketList, true);
         for (BucketParticipant participant : existingParticipants) {
-            participant.setIsActive(false);
+            participant.setActive(false);
         }
         bucketParticipantRepository.saveAll(existingParticipants);
 
@@ -412,14 +449,14 @@ public class BucketListServiceImpl implements BucketListService {
 
             if (existingParticipant != null) {
                 // 기존 참여자를 다시 활성화
-                existingParticipant.setIsActive(true);
+                existingParticipant.setActive(true);
                 bucketParticipantRepository.save(existingParticipant);
             } else {
                 // 새로운 참여자 추가
                 BucketParticipant newParticipant = BucketParticipant.builder()
                         .bucketList(bucketList)
                         .member(targetMember)
-                        .isActive(true)
+                        .active(true)
                         .build();
                 bucketParticipantRepository.save(newParticipant);
             }
@@ -437,9 +474,9 @@ public class BucketListServiceImpl implements BucketListService {
     protected void deactivateAllParticipants(BucketList bucketList) {
         log.info("모든 참여자 비활성화 - 버킷리스트 ID: {}", bucketList.getId());
 
-        List<BucketParticipant> participants = bucketParticipantRepository.findByBucketListAndIsActive(bucketList, true);
+        List<BucketParticipant> participants = bucketParticipantRepository.findByBucketListAndActive(bucketList, true);
         for (BucketParticipant participant : participants) {
-            participant.setIsActive(false);
+            participant.setActive(false);
         }
         bucketParticipantRepository.saveAll(participants);
 
@@ -459,19 +496,88 @@ public class BucketListServiceImpl implements BucketListService {
     }
 
     @Override
-    public List<BucketListResponse> getParticipatingBucketLists() {
-        log.info("내가 참여한 버킷리스트 목록 조회 요청");
+    @Transactional
+    public BucketListResponse updateBucketListStatus(Long bucketListId, BucketListStatus status) {
+        log.info("버킷리스트 상태 변경 요청: {} -> {}", bucketListId, status);
 
         Member member = getCurrentMember();
+        BucketList bucketList = getBucketListWithOwnershipValidation(bucketListId, member.getId());
 
-        // 내가 참여자로 등록된 버킷리스트 조회 (활성화된 참여자만, 삭제되지 않은 버킷리스트만)
-        List<BucketList> participatingBucketLists = bucketListRepository.findByParticipantMemberAndActiveOrderByCreatedAtDesc(member);
+        // 상태 변경
+        BucketListStatus previousStatus = bucketList.getStatus();
+        bucketList.setStatus(status);
 
-        log.info("내가 참여한 버킷리스트 목록 조회 완료: 총 {}개", participatingBucketLists.size());
+        BucketList savedBucketList = bucketListRepository.save(bucketList);
+        
+        log.info("버킷리스트 상태 변경 완료: ID = {}, {} -> {}", 
+            bucketListId, previousStatus, status);
 
-        return participatingBucketLists.stream()
-                .map(BucketListResponse::ofForParticipant)
+        return BucketListResponse.of(savedBucketList);
+    }
+    
+
+    /**
+     * 상태별 버킷리스트 조회 (내가 생성한 것만)
+     */
+    private List<BucketList> getBucketListsByStatus(Member member, BucketListStatus status) {
+        return bucketListRepository.findByMemberAndDeletedOrderByCreatedAtDesc(member, false)
+                .stream()
+                .filter(bucketList -> bucketList.getStatus() == status)
                 .toList();
+    }
+    
+    /**
+     * 참여중인 버킷리스트 조회 - 원본 버킷리스트 ID 기반으로 중복 없이 조회
+     * (나 혼자 생성한 버킷리스트는 포함되지 않음)
+     */
+    private List<BucketList> getParticipatingBucketLists(Member member) {
+        log.debug("참여중인 버킷리스트 조회 시작 - 멤버 ID: {}", member.getId());
+        
+        // 원본 버킷리스트 ID가 있는 버킷리스트들만 조회 (공동 버킷리스트 중 내가 참여한 것들)
+        List<BucketList> participatingBucketLists = bucketListRepository.findParticipatingBucketListsWithOriginalId(member);
+        
+        log.debug("원본 ID가 있는 참여중인 버킷리스트 수: {}", participatingBucketLists.size());
+        
+        // 원본 버킷리스트 ID별로 그룹핑하여 각 그룹에서 원본 버킷리스트만 반환
+        List<BucketList> originalBucketLists = participatingBucketLists.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                    BucketList::getOriginalBucketListId,
+                    java.util.LinkedHashMap::new,
+                    java.util.stream.Collectors.toList()
+                ))
+                .entrySet()
+                .stream()
+                .map(entry -> {
+                    Long originalId = entry.getKey();
+                    // 원본 버킷리스트를 조회
+                    return bucketListRepository.findByIdAndDeletedFalse(originalId).orElse(null);
+                })
+                .filter(Objects::nonNull)
+                .sorted(Comparator.comparing(BucketList::getCreatedAt).reversed()) // 최신순 정렬
+                .toList();
+        
+        log.debug("최종 참여중인 원본 버킷리스트 수: {}", originalBucketLists.size());
+        
+        return originalBucketLists;
+    }
+
+    @Override
+    public BucketListCreationAvailabilityResponse checkCreationAvailability() {
+        log.info("버킷리스트 생성 가능 여부 확인 요청");
+
+        Member member = getCurrentMember();
+        
+        // 현재 사용자의 소프트 삭제되지 않은 머니박스 개수 조회
+        long currentMoneyBoxCount = accountService.getMoneyBoxCountByMember(member);
+        
+        // 최대 허용 개수 (20개)
+        int maxLimit = 20;
+        boolean canCreate = currentMoneyBoxCount < maxLimit;
+        
+        log.info("버킷리스트 생성 가능 여부 확인 완료: 현재 {}개, 최대 {}개, 생성가능 = {}", 
+                currentMoneyBoxCount, maxLimit, canCreate);
+        
+        return new BucketListCreationAvailabilityResponse(canCreate, currentMoneyBoxCount);
     }
 
 }

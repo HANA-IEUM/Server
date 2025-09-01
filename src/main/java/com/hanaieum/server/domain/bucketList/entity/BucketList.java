@@ -54,6 +54,9 @@ public class BucketList extends BaseEntity {
     @Builder.Default
     private boolean deleted = false; // 삭제 여부
 
+    @Column(name = "original_bucket_list_id", nullable = true)
+    private Long originalBucketListId; // 원본 버킷리스트 ID (공동 버킷리스트인 경우)
+
     @OneToMany(mappedBy = "bucketList", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<BucketParticipant> participants = new ArrayList<>();

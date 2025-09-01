@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -40,7 +41,38 @@ public interface BucketListRepository extends JpaRepository<BucketList, Long> {
     // 참여자 관련 조회
     @Query("SELECT DISTINCT bl FROM BucketList bl " +
            "JOIN bl.participants p " +
-           "WHERE p.member = :member AND p.isActive = true AND bl.deleted = false " +
+           "WHERE p.member = :member AND p.active = true AND bl.deleted = false " +
            "ORDER BY bl.createdAt DESC")
     List<BucketList> findByParticipantMemberAndActiveOrderByCreatedAtDesc(@Param("member") Member member);
+    
+    // 스케줄러용 - 만료된 진행중 버킷리스트 조회
+    @Query("SELECT bl FROM BucketList bl " +
+           "WHERE bl.targetDate < :today AND bl.status = 'IN_PROGRESS' AND bl.deleted = false")
+    List<BucketList> findExpiredInProgressBucketLists(@Param("today") LocalDate today);
+    
+    // 특정 회원의 만료된 진행중 버킷리스트 조회
+    @Query("SELECT bl FROM BucketList bl " +
+           "WHERE bl.member.id = :memberId AND bl.targetDate < :today AND bl.status = 'IN_PROGRESS' AND bl.deleted = false")
+    List<BucketList> findExpiredInProgressBucketListsByMember(@Param("memberId") Long memberId, @Param("today") LocalDate today);
+    
+    // 특정 그룹원의 공개 버킷리스트 조회
+    @Query("SELECT bl FROM BucketList bl " +
+           "WHERE bl.member = :member AND bl.member.group = :group AND bl.deleted = false AND bl.publicFlag = true " +
+           "ORDER BY bl.createdAt DESC")
+    List<BucketList> findByMemberAndMemberGroupAndPublicOrderByCreatedAtDesc(@Param("member") Member member, @Param("group") Group group);
+    
+    // 원본 버킷리스트 ID 기반 조회 메서드들
+    @Query("SELECT DISTINCT bl FROM BucketList bl " +
+           "JOIN bl.participants p " +
+           "WHERE p.member = :member AND p.active = true AND bl.deleted = false " +
+           "AND bl.originalBucketListId IS NOT NULL " +
+           "ORDER BY bl.createdAt DESC")
+    List<BucketList> findParticipatingBucketListsWithOriginalId(@Param("member") Member member);
+    
+    // 특정 원본 버킷리스트 ID의 모든 관련 버킷리스트 조회 (원본 포함)
+    @Query("SELECT bl FROM BucketList bl " +
+           "WHERE (bl.id = :originalId OR bl.originalBucketListId = :originalId) " +
+           "AND bl.deleted = false " +
+           "ORDER BY bl.createdAt ASC")
+    List<BucketList> findAllByOriginalBucketListId(@Param("originalId") Long originalId);
 }

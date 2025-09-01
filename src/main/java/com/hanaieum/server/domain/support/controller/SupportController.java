@@ -1,6 +1,7 @@
 package com.hanaieum.server.domain.support.controller;
 
 import com.hanaieum.server.common.dto.ApiResponse;
+import com.hanaieum.server.domain.support.dto.SupportMessageUpdateRequest;
 import com.hanaieum.server.domain.support.dto.SupportRequest;
 import com.hanaieum.server.domain.support.dto.SupportResponse;
 import com.hanaieum.server.domain.support.service.SupportService;
@@ -43,5 +44,36 @@ public class SupportController {
         
         List<SupportResponse> supports = supportService.getBucketListSupports(bucketListId, userDetails.getMember());
         return ResponseEntity.ok(ApiResponse.ok(supports));
+    }
+
+    @Operation(summary = "단일 후원/응원 기록 조회", description = "내가 작성한 후원/응원 기록을 조회합니다")
+    @GetMapping("/{supportId}")
+    public ResponseEntity<ApiResponse<SupportResponse>> getSupportRecord(
+            @PathVariable Long supportId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        SupportResponse response = supportService.getSupportRecord(supportId, userDetails.getMember());
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    @Operation(summary = "후원/응원 메시지 수정", description = "내가 작성한 후원/응원 메시지를 수정합니다")
+    @PutMapping("/{supportId}")
+    public ResponseEntity<ApiResponse<SupportResponse>> updateSupportMessage(
+            @PathVariable Long supportId,
+            @Valid @RequestBody SupportMessageUpdateRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        SupportResponse response = supportService.updateSupportMessage(supportId, request, userDetails.getMember());
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    @Operation(summary = "후원/응원 기록 삭제", description = "내가 작성한 후원/응원 기록을 삭제합니다")
+    @DeleteMapping("/{supportId}")
+    public ResponseEntity<ApiResponse<Void>> deleteSupportRecord(
+            @PathVariable Long supportId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        supportService.deleteSupportRecord(supportId, userDetails.getMember());
+        return ResponseEntity.ok(ApiResponse.ok());
     }
 }

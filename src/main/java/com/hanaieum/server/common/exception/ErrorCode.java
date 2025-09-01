@@ -54,6 +54,8 @@ public enum ErrorCode {
     CANNOT_SUPPORT_OWN_BUCKET("SUPPORT_001", "자신의 버킷리스트는 후원/응원할 수 없습니다", HttpStatus.BAD_REQUEST),
     INVALID_SUPPORT_AMOUNT("SUPPORT_002", "후원 금액이 유효하지 않습니다", HttpStatus.BAD_REQUEST),
     ACCOUNT_PASSWORD_REQUIRED("SUPPORT_003", "후원 시 계좌 비밀번호가 필요합니다", HttpStatus.BAD_REQUEST),
+    SUPPORT_RECORD_NOT_FOUND("SUPPORT_004", "후원/응원 기록을 찾을 수 없습니다", HttpStatus.NOT_FOUND),
+    SUPPORT_RECORD_ACCESS_DENIED("SUPPORT_005", "후원/응원 기록에 접근할 권한이 없습니다", HttpStatus.FORBIDDEN),
 
     // 자동이체 관련 에러
     AUTO_TRANSFER_SCHEDULE_NOT_FOUND("AUTO_TRANSFER_001", "자동이체 스케줄을 찾을 수 없습니다", HttpStatus.NOT_FOUND),
@@ -75,6 +77,7 @@ public enum ErrorCode {
     GROUP_NOT_FOUND("GROUP_001", "그룹을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     MEMBER_ALREADY_JOIN_GROUP("GROUP_002", "이미 참여한 그룹이 있습니다.", HttpStatus.CONFLICT),
     GROUP_FORBIDDEN("GROUP_003", "그룹원이 아닙니다.", HttpStatus.FORBIDDEN),
+    MEMBER_NOT_IN_SAME_GROUP("GROUP_004", "같은 그룹에 속한 멤버가 아닙니다.", HttpStatus.FORBIDDEN),
 
     // 앨범 관련 에러
     EMPTY_FILE("PHOTO_001", "빈 파일입니다.", HttpStatus.BAD_REQUEST),

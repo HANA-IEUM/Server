@@ -2,7 +2,6 @@ package com.hanaieum.server.domain.bucketList.entity;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.context.annotation.RequestScope;
 
 @Getter
 @RequiredArgsConstructor

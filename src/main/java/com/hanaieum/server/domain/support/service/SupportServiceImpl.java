@@ -6,6 +6,7 @@ import com.hanaieum.server.domain.account.entity.Account;
 import com.hanaieum.server.domain.bucketList.entity.BucketList;
 import com.hanaieum.server.domain.bucketList.repository.BucketListRepository;
 import com.hanaieum.server.domain.member.entity.Member;
+import com.hanaieum.server.domain.support.dto.SupportMessageUpdateRequest;
 import com.hanaieum.server.domain.support.dto.SupportRequest;
 import com.hanaieum.server.domain.support.dto.SupportResponse;
 import com.hanaieum.server.domain.support.entity.SupportRecord;
@@ -13,12 +14,14 @@ import com.hanaieum.server.domain.support.entity.SupportType;
 import com.hanaieum.server.domain.support.repository.SupportRecordRepository;
 import com.hanaieum.server.domain.transfer.service.TransferService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -56,12 +59,12 @@ public class SupportServiceImpl implements SupportService {
 
     @Override
     public List<SupportResponse> getBucketListSupports(Long bucketListId, Member member) {
-        // 버킷리스트 존재 및 접근 권한 확인
+        // 버킷리스트 존재 확인
         BucketList bucketList = bucketListRepository.findByIdAndDeletedFalse(bucketListId)
                 .orElseThrow(() -> new CustomException(ErrorCode.BUCKET_LIST_NOT_FOUND));
 
-        // 본인의 버킷리스트이거나 공개된 버킷리스트만 조회 가능
-        if (!bucketList.getMember().getId().equals(member.getId()) && !bucketList.isPublicFlag()) {
+        // 접근 권한 확인
+        if (!canAccessBucketList(bucketList, member)) {
             throw new CustomException(ErrorCode.BUCKET_LIST_ACCESS_DENIED);
         }
 
@@ -111,6 +114,91 @@ public class SupportServiceImpl implements SupportService {
                 .message(request.getMessage())
                 .letterColor(request.getLetterColor())
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public SupportResponse updateSupportMessage(Long supportId, SupportMessageUpdateRequest request, Member member) {
+        // 후원/응원 기록 조회 (삭제되지 않은 것만)
+        SupportRecord supportRecord = supportRecordRepository.findByIdAndDeletedFalse(supportId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SUPPORT_RECORD_NOT_FOUND));
+
+        // 작성자 본인만 수정 가능
+        if (!supportRecord.getSupporter().getId().equals(member.getId())) {
+            throw new CustomException(ErrorCode.SUPPORT_RECORD_ACCESS_DENIED);
+        }
+
+        // 메시지 업데이트
+        supportRecord.setMessage(request.getMessage());
+
+        supportRecordRepository.save(supportRecord);
+        
+        log.info("후원 메시지 수정 완료 - 후원 ID: {}, 회원 ID: {}", supportId, member.getId());
+        return SupportResponse.of(supportRecord);
+    }
+
+    @Override
+    public SupportResponse getSupportRecord(Long supportId, Member member) {
+        // 후원/응원 기록 조회 (삭제되지 않은 것만)
+        SupportRecord supportRecord = supportRecordRepository.findByIdAndDeletedFalse(supportId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SUPPORT_RECORD_NOT_FOUND));
+
+        // 버킷리스트 접근 권한 확인 (작성자 본인이거나 버킷리스트에 접근할 수 있는 경우)
+        if (!supportRecord.getSupporter().getId().equals(member.getId()) && 
+            !canAccessBucketList(supportRecord.getBucketList(), member)) {
+            throw new CustomException(ErrorCode.SUPPORT_RECORD_ACCESS_DENIED);
+        }
+
+        log.info("후원/응원 기록 조회 - 후원 ID: {}, 회원 ID: {}", supportId, member.getId());
+        return SupportResponse.of(supportRecord);
+    }
+
+    @Override
+    @Transactional
+    public void deleteSupportRecord(Long supportId, Member member) {
+        // 후원/응원 기록 조회 (삭제되지 않은 것만)
+        SupportRecord supportRecord = supportRecordRepository.findByIdAndDeletedFalse(supportId)
+                .orElseThrow(() -> new CustomException(ErrorCode.SUPPORT_RECORD_NOT_FOUND));
+
+        // 작성자 본인만 삭제 가능
+        if (!supportRecord.getSupporter().getId().equals(member.getId())) {
+            throw new CustomException(ErrorCode.SUPPORT_RECORD_ACCESS_DENIED);
+        }
+
+        // Soft delete 처리
+        supportRecord.setDeleted(true);
+        supportRecordRepository.save(supportRecord);
+
+        log.info("후원/응원 기록 삭제 완료 - 후원 ID: {}, 회원 ID: {}", supportId, member.getId());
+    }
+
+    /**
+     * 버킷리스트에 접근할 수 있는지 확인
+     * 1. 본인의 버킷리스트인 경우 무조건 가능
+     * 2. 공개된 버킷리스트이면 같은 그룹에 속한 경우 가능
+     * 3. 공개되지 않은 버킷리스트이면 BucketParticipant에 속해야 함
+     */
+    private boolean canAccessBucketList(BucketList bucketList, Member member) {
+        // 1. 본인의 버킷리스트인 경우 무조건 허용
+        if (bucketList.getMember().getId().equals(member.getId())) {
+            return true;
+        }
+
+        // 2. 공개된 버킷리스트인 경우
+        if (bucketList.isPublicFlag()) {
+            // 같은 그룹에 속한지 확인
+            if (bucketList.getMember().getGroup() != null && member.getGroup() != null) {
+                return bucketList.getMember().getGroup().getId().equals(member.getGroup().getId());
+            }
+            return false;
+        }
+
+        // 3. 비공개 버킷리스트인 경우 - 참여자인지 확인
+        return bucketList.getParticipants().stream()
+                .anyMatch(participant -> 
+                    participant.getMember().getId().equals(member.getId()) && 
+                    participant.getActive()
+                );
     }
 
 }
