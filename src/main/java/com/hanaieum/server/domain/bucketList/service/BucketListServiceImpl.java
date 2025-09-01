@@ -9,6 +9,7 @@ import com.hanaieum.server.domain.bucketList.dto.BucketListUpdateRequest;
 import com.hanaieum.server.domain.bucketList.dto.BucketListDetailResponse;
 import com.hanaieum.server.domain.bucketList.entity.BucketList;
 import com.hanaieum.server.domain.bucketList.entity.BucketListStatus;
+import com.hanaieum.server.domain.bucketList.entity.BucketListCategory;
 import com.hanaieum.server.domain.bucketList.entity.BucketParticipant;
 import com.hanaieum.server.domain.bucketList.repository.BucketListRepository;
 import com.hanaieum.server.domain.bucketList.repository.BucketParticipantRepository;
@@ -25,6 +26,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.ArrayList;
 
 @Slf4j
 @Service
@@ -36,6 +40,7 @@ public class BucketListServiceImpl implements BucketListService {
     private final BucketParticipantRepository bucketParticipantRepository;
     private final MemberRepository memberRepository;
     private final AccountService accountService;
+    private final BucketListSchedulerService bucketListSchedulerService;
 
     /**
      * 현재 로그인한 사용자 정보를 가져오는 공통 메서드
@@ -141,19 +146,52 @@ public class BucketListServiceImpl implements BucketListService {
     }
 
     @Override
-    public List<BucketListResponse> getBucketLists() {
-        log.info("버킷리스트 목록 조회 요청");
-
+    public List<BucketListResponse> getBucketListsByCategory(String category) {
+        log.info("분류별 버킷리스트 목록 조회 요청: {}", category);
+        
         Member member = getCurrentMember();
-
-        // 삭제되지 않은 해당 회원의 버킷리스트 조회 (생성일 기준 내림차순)
-        List<BucketList> bucketLists = bucketListRepository.findByMemberAndDeletedOrderByCreatedAtDesc(member, false);
-
-        log.info("버킷리스트 목록 조회 완료: 총 {}개", bucketLists.size());
-
-        return bucketLists.stream()
-                .map(BucketListResponse::of)
-                .toList();
+        
+        // API 호출 시점에 해당 회원의 만료된 버킷리스트 상태 업데이트
+        bucketListSchedulerService.updateExpiredBucketListsForMember(member.getId());
+        
+        BucketListCategory bucketListCategory = BucketListCategory.fromString(category);
+        
+        List<BucketList> bucketLists;
+        
+        switch (bucketListCategory) {
+            case ALL:
+                // 전체: 내가 생성한 + 내가 참여한 버킷리스트
+                bucketLists = getAllBucketLists(member);
+                break;
+            case IN_PROGRESS:
+                // 진행중: 내가 생성한 버킷리스트 중 진행중인 것들
+                bucketLists = getBucketListsByStatus(member, BucketListStatus.IN_PROGRESS);
+                break;
+            case COMPLETED:
+                // 종료: 내가 생성한 버킷리스트 중 완료된 것들  
+                bucketLists = getBucketListsByStatus(member, BucketListStatus.COMPLETED);
+                break;
+            case PARTICIPATING:
+                // 참여: 내가 구성원으로 참여한 버킷리스트들
+                bucketLists = bucketListRepository.findByParticipantMemberAndActiveOrderByCreatedAtDesc(member);
+                break;
+            default:
+                bucketLists = getAllBucketLists(member);
+                break;
+        }
+        
+        log.info("분류별 버킷리스트 조회 완료: 카테고리 = {}, 총 {}개", bucketListCategory.getDescription(), bucketLists.size());
+        
+        // 참여한 버킷리스트의 경우 머니박스 정보 제외
+        if (bucketListCategory == BucketListCategory.PARTICIPATING) {
+            return bucketLists.stream()
+                    .map(BucketListResponse::ofForParticipant)
+                    .toList();
+        } else {
+            return bucketLists.stream()
+                    .map(BucketListResponse::of)
+                    .toList();
+        }
     }
 
     @Override
@@ -459,18 +497,66 @@ public class BucketListServiceImpl implements BucketListService {
     }
 
     @Override
-    public List<BucketListResponse> getParticipatingBucketLists() {
-        log.info("내가 참여한 버킷리스트 목록 조회 요청");
+    @Transactional
+    public BucketListResponse updateBucketListStatus(Long bucketListId, BucketListStatus status) {
+        log.info("버킷리스트 상태 변경 요청: {} -> {}", bucketListId, status);
 
         Member member = getCurrentMember();
+        BucketList bucketList = getBucketListWithOwnershipValidation(bucketListId, member.getId());
 
-        // 내가 참여자로 등록된 버킷리스트 조회 (활성화된 참여자만, 삭제되지 않은 버킷리스트만)
+        // 상태 변경
+        BucketListStatus previousStatus = bucketList.getStatus();
+        bucketList.setStatus(status);
+
+        BucketList savedBucketList = bucketListRepository.save(bucketList);
+        
+        log.info("버킷리스트 상태 변경 완료: ID = {}, {} -> {}", 
+            bucketListId, previousStatus, status);
+
+        return BucketListResponse.of(savedBucketList);
+    }
+    
+    /**
+     * 모든 버킷리스트 조회 (내가 생성한 + 내가 참여한)
+     */
+    private List<BucketList> getAllBucketLists(Member member) {
+        // 내가 생성한 버킷리스트
+        List<BucketList> myBucketLists = bucketListRepository.findByMemberAndDeletedOrderByCreatedAtDesc(member, false);
+        
+        // 내가 참여한 버킷리스트
         List<BucketList> participatingBucketLists = bucketListRepository.findByParticipantMemberAndActiveOrderByCreatedAtDesc(member);
-
-        log.info("내가 참여한 버킷리스트 목록 조회 완료: 총 {}개", participatingBucketLists.size());
-
-        return participatingBucketLists.stream()
-                .map(BucketListResponse::ofForParticipant)
+        
+        // 중복 제거하여 합치기 (Set 사용)
+        Set<Long> bucketListIds = new HashSet<>();
+        List<BucketList> allBucketLists = new ArrayList<>();
+        
+        // 내가 생성한 것 먼저 추가
+        for (BucketList bucketList : myBucketLists) {
+            if (bucketListIds.add(bucketList.getId())) {
+                allBucketLists.add(bucketList);
+            }
+        }
+        
+        // 참여한 것 추가 (중복 제거)
+        for (BucketList bucketList : participatingBucketLists) {
+            if (bucketListIds.add(bucketList.getId())) {
+                allBucketLists.add(bucketList);
+            }
+        }
+        
+        // 생성일 기준 내림차순 정렬
+        allBucketLists.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
+        
+        return allBucketLists;
+    }
+    
+    /**
+     * 상태별 버킷리스트 조회 (내가 생성한 것만)
+     */
+    private List<BucketList> getBucketListsByStatus(Member member, BucketListStatus status) {
+        return bucketListRepository.findByMemberAndDeletedOrderByCreatedAtDesc(member, false)
+                .stream()
+                .filter(bucketList -> bucketList.getStatus() == status)
                 .toList();
     }
 
