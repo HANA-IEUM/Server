@@ -5,6 +5,7 @@ import com.hanaieum.server.domain.bucketList.dto.BucketListRequest;
 import com.hanaieum.server.domain.bucketList.dto.BucketListResponse;
 import com.hanaieum.server.domain.bucketList.dto.BucketListUpdateRequest;
 import com.hanaieum.server.domain.bucketList.dto.BucketListDetailResponse;
+import com.hanaieum.server.domain.bucketList.dto.BucketListCreationAvailabilityResponse;
 import com.hanaieum.server.domain.bucketList.entity.BucketListStatus;
 import com.hanaieum.server.domain.bucketList.service.BucketListService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,6 +28,19 @@ import java.util.List;
 public class BucketListController {
 
     private final BucketListService bucketListService;
+
+    @Operation(summary = "버킷리스트 생성 가능 여부 확인", description = "사용자가 버킷리스트를 생성할 수 있는지 확인합니다. 머니박스 개수 한도(20개)를 체크합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "생성 가능 여부 확인 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "회원을 찾을 수 없음")
+    })
+    @GetMapping("/creation-availability")
+    public ResponseEntity<ApiResponse<BucketListCreationAvailabilityResponse>> checkBucketListCreationAvailability() {
+        log.info("버킷리스트 생성 가능 여부 확인 API 호출");
+        BucketListCreationAvailabilityResponse response = bucketListService.checkCreationAvailability();
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
 
     @Operation(summary = "버킷리스트 생성", description = "사용자가 버킷리스트를 생성합니다. createMoneyBox 옵션이 true인 경우 머니박스도 함께 생성됩니다.")
     @ApiResponses({
