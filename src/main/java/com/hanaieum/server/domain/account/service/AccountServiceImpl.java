@@ -262,5 +262,16 @@ public class AccountServiceImpl implements AccountService {
         accountRepository.save(account);
         log.info("입금 처리 완료 - 계좌 ID: {}, 입금액: {}, 잔액: {}", accountId, amount, newBalance);
     }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public long getMoneyBoxCountByMember(Member member) {
+        log.info("멤버의 머니박스 개수 조회: memberId = {}", member.getId());
+        
+        long count = accountRepository.countByMemberAndAccountTypeAndDeletedFalse(member, AccountType.MONEY_BOX);
+        
+        log.info("머니박스 개수 조회 완료: memberId = {}, count = {}", member.getId(), count);
+        return count;
+    }
 
 }

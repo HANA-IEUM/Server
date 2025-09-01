@@ -4,6 +4,7 @@ import com.hanaieum.server.domain.bucketList.dto.BucketListRequest;
 import com.hanaieum.server.domain.bucketList.dto.BucketListResponse;
 import com.hanaieum.server.domain.bucketList.dto.BucketListUpdateRequest;
 import com.hanaieum.server.domain.bucketList.dto.BucketListDetailResponse;
+import com.hanaieum.server.domain.bucketList.dto.BucketListCreationAvailabilityResponse;
 import com.hanaieum.server.domain.bucketList.entity.BucketListStatus;
 
 import java.util.List;
@@ -29,4 +30,7 @@ public interface BucketListService {
     
     // 버킷리스트 상태 변경
     BucketListResponse updateBucketListStatus(Long bucketListId, BucketListStatus status);
+    
+    // 버킷리스트 생성 가능 여부 확인
+    BucketListCreationAvailabilityResponse checkCreationAvailability();
 }

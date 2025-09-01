@@ -7,6 +7,7 @@ import com.hanaieum.server.domain.bucketList.dto.BucketListRequest;
 import com.hanaieum.server.domain.bucketList.dto.BucketListResponse;
 import com.hanaieum.server.domain.bucketList.dto.BucketListUpdateRequest;
 import com.hanaieum.server.domain.bucketList.dto.BucketListDetailResponse;
+import com.hanaieum.server.domain.bucketList.dto.BucketListCreationAvailabilityResponse;
 import com.hanaieum.server.domain.bucketList.entity.BucketList;
 import com.hanaieum.server.domain.bucketList.entity.BucketListStatus;
 import com.hanaieum.server.domain.bucketList.entity.BucketListCategory;
@@ -514,6 +515,25 @@ public class BucketListServiceImpl implements BucketListService {
             bucketListId, previousStatus, status);
 
         return BucketListResponse.of(savedBucketList);
+    }
+    
+    @Override
+    public BucketListCreationAvailabilityResponse checkCreationAvailability() {
+        log.info("버킷리스트 생성 가능 여부 확인 요청");
+        
+        Member member = getCurrentMember();
+        
+        // 현재 사용자의 소프트 삭제되지 않은 머니박스 개수 조회
+        long currentMoneyBoxCount = accountService.getMoneyBoxCountByMember(member);
+        
+        // 최대 허용 개수 (20개)
+        int maxLimit = 20;
+        boolean canCreate = currentMoneyBoxCount < maxLimit;
+        
+        log.info("버킷리스트 생성 가능 여부 확인 완료: 현재 {}개, 최대 {}개, 생성가능 = {}", 
+                currentMoneyBoxCount, maxLimit, canCreate);
+        
+        return new BucketListCreationAvailabilityResponse(canCreate, currentMoneyBoxCount);
     }
     
     /**
