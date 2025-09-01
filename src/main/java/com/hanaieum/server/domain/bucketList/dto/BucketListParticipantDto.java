@@ -22,7 +22,7 @@ public class BucketListParticipantDto {
                 .memberId(participant.getMember().getId())
                 .memberName(participant.getMember().getName())
                 .joinedAt(participant.getJoinedAt())
-                .isActive(participant.getIsActive())
+                .isActive(participant.getActive())
                 .build();
     }
 }

@@ -386,7 +386,7 @@ public class BucketListServiceImpl implements BucketListService {
             BucketParticipant originalParticipant = BucketParticipant.builder()
                     .bucketList(originalBucketList)
                     .member(targetMember)
-                    .isActive(true)
+                    .active(true)
                     .build();
             bucketParticipantRepository.save(originalParticipant);
 
@@ -394,7 +394,7 @@ public class BucketListServiceImpl implements BucketListService {
             BucketParticipant sharedParticipant = BucketParticipant.builder()
                     .bucketList(savedSharedBucketList)
                     .member(creator)
-                    .isActive(true)
+                    .active(true)
                     .build();
             bucketParticipantRepository.save(sharedParticipant);
 
@@ -421,9 +421,9 @@ public class BucketListServiceImpl implements BucketListService {
         }
 
         // 기존 참여자들을 모두 비활성화
-        List<BucketParticipant> existingParticipants = bucketParticipantRepository.findByBucketListAndIsActive(bucketList, true);
+        List<BucketParticipant> existingParticipants = bucketParticipantRepository.findByBucketListAndActive(bucketList, true);
         for (BucketParticipant participant : existingParticipants) {
-            participant.setIsActive(false);
+            participant.setActive(false);
         }
         bucketParticipantRepository.saveAll(existingParticipants);
 
@@ -450,14 +450,14 @@ public class BucketListServiceImpl implements BucketListService {
 
             if (existingParticipant != null) {
                 // 기존 참여자를 다시 활성화
-                existingParticipant.setIsActive(true);
+                existingParticipant.setActive(true);
                 bucketParticipantRepository.save(existingParticipant);
             } else {
                 // 새로운 참여자 추가
                 BucketParticipant newParticipant = BucketParticipant.builder()
                         .bucketList(bucketList)
                         .member(targetMember)
-                        .isActive(true)
+                        .active(true)
                         .build();
                 bucketParticipantRepository.save(newParticipant);
             }
@@ -475,9 +475,9 @@ public class BucketListServiceImpl implements BucketListService {
     protected void deactivateAllParticipants(BucketList bucketList) {
         log.info("모든 참여자 비활성화 - 버킷리스트 ID: {}", bucketList.getId());
 
-        List<BucketParticipant> participants = bucketParticipantRepository.findByBucketListAndIsActive(bucketList, true);
+        List<BucketParticipant> participants = bucketParticipantRepository.findByBucketListAndActive(bucketList, true);
         for (BucketParticipant participant : participants) {
-            participant.setIsActive(false);
+            participant.setActive(false);
         }
         bucketParticipantRepository.saveAll(participants);
 

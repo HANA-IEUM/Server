@@ -14,4 +14,6 @@ public interface AuthService {
     void logout(Long memberId);
     
     TokenResponse refreshToken(RefreshTokenRequest refreshTokenRequest);
+    
+    boolean isPhoneNumberAvailable(String phoneNumber);
 }

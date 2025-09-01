@@ -54,7 +54,7 @@ public class BucketListResponse {
     private static BucketListResponse createBucketListResponse(BucketList bucketList, boolean includeMoneyBoxInfo) {
         // 참여자 목록 생성 (활성화된 참여자만)
         List<BucketListParticipantDto> participants = bucketList.getParticipants().stream()
-                .filter(participant -> participant.getIsActive())
+                .filter(participant -> participant.getActive())
                 .map(BucketListParticipantDto::of)
                 .toList();
         
