@@ -135,5 +135,13 @@ public class AuthServiceImpl implements AuthService {
 
         return TokenResponse.of(newAccessToken, refreshToken.getToken(), accessTokenExpiration, refreshToken.getMember().isHideGroupPrompt(), refreshToken.getMember().isMainAccountLinked());
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isPhoneNumberAvailable(String phoneNumber) {
+        boolean exists = memberRepository.existsByPhoneNumber(phoneNumber);
+        log.info("전화번호 중복 확인 - 번호: {}, 사용 가능: {}", phoneNumber, !exists);
+        return !exists;
+    }
     
 }

@@ -32,7 +32,7 @@ public class BucketParticipant {
     
     @Column(name = "is_active", nullable = false)
     @Builder.Default
-    private Boolean isActive = true; // 활성 여부
+    private Boolean active = true; // 활성 여부
     
     @PrePersist
     protected void onCreate() {
