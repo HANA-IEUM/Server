@@ -41,7 +41,7 @@ public interface BucketListRepository extends JpaRepository<BucketList, Long> {
     // 참여자 관련 조회
     @Query("SELECT DISTINCT bl FROM BucketList bl " +
            "JOIN bl.participants p " +
-           "WHERE p.member = :member AND p.isActive = true AND bl.deleted = false " +
+           "WHERE p.member = :member AND p.active = true AND bl.deleted = false " +
            "ORDER BY bl.createdAt DESC")
     List<BucketList> findByParticipantMemberAndActiveOrderByCreatedAtDesc(@Param("member") Member member);
     
