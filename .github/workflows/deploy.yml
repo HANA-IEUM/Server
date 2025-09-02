@@ -79,10 +79,14 @@ jobs:
             echo "애플리케이션 시작 대기 및 확인"
             sleep 10
 
-            if pgrep -f "$JAR_FILE"; then
-              echo "애플리케이션이 성공적으로 시작되었습니다."
+            # 애플리케이션이 실제로 실행되고 있는지 확인
+            if lsof -t -i:8080 > /dev/null; then
+              echo "애플리케이션이 8080 포트에서 실행 중입니다"
+              echo "최근 로그:"
+              tail -n 15 app.log
             else
-              echo "애플리케이션 시작 실패. 최근 로그 확인:"
-              tail -50 app.log
+              echo "애플리케이션 시작 실패"
+              echo "오류 로그:"
+              tail -n 100 app.log
               exit 1
             fi
