@@ -49,7 +49,7 @@ dependencies {
     testAnnotationProcessor 'org.projectlombok:lombok'
 
     // mysql
-     runtimeOnly 'com.mysql:mysql-connector-j'
+    implementation 'com.mysql:mysql-connector-j'
 
     // test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
