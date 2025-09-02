@@ -87,6 +87,6 @@ jobs:
             else
               echo "애플리케이션 시작 실패"
               echo "오류 로그:"
-              tail -n 100 app.log
+              tail -n 500 app.log
               exit 1
             fi
