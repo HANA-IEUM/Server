@@ -108,9 +108,9 @@ public class CouponServiceImpl implements CouponService {
     public List<CouponResponse> getCoupons(Long memberId) {
 
         List<MemberCoupon> coupons = memberCouponRepository.findAllByMember_Id(memberId);
-        if (coupons.isEmpty()) {
-            throw new CustomException(ErrorCode.COUPON_NOT_FOUND);
-        }
+//        if (coupons.isEmpty()) {
+//            throw new CustomException(ErrorCode.COUPON_NOT_FOUND);
+//        }
 
         List<CouponResponse> couponResponses = coupons
                 .stream()
