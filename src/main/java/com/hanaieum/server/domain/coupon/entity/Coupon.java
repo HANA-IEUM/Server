@@ -24,10 +24,10 @@ public class Coupon extends BaseEntity {
     @Column(nullable = false, length = 20, name = "partner_name")
     private String partnerName;
 
-    @Column(nullable = false, length = 10, name = "coupon_name")
+    @Column(nullable = false, length = 20, name = "coupon_name")
     private String couponName;
 
-    @Column(nullable = false, length = 20, name = "description")
+    @Column(nullable = false, length = 30, name = "description")
     private String description;
 
     @Column(nullable = false, name = "validity_days")
