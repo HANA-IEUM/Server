@@ -18,6 +18,7 @@ public class MyBucketListDetailResponse {
     private String title; // 버킷리스트 이름
     private BigDecimal targetAmount; // 목표금액
     private LocalDate targetDate; // 목표기간 종료날짜
+    private boolean publicFlag; // 공개여부
     private boolean togetherFlag; // 혼자/같이 여부
     private BucketListStatus bucketListStatus; // 상태
     private boolean canComplete; // 달성 버튼 활성화 여부
@@ -47,6 +48,7 @@ public class MyBucketListDetailResponse {
                 .title(bucketList.getTitle())
                 .targetAmount(bucketList.getTargetAmount())
                 .targetDate(bucketList.getTargetDate())
+                .publicFlag(bucketList.isPublicFlag())
                 .togetherFlag(bucketList.isShareFlag())
                 .bucketListStatus(bucketList.getStatus())
                 .canComplete(canComplete)
