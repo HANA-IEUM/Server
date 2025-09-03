@@ -2,7 +2,13 @@ package com.hanaieum.server.domain.bucketList.service;
 
 import com.hanaieum.server.common.exception.CustomException;
 import com.hanaieum.server.common.exception.ErrorCode;
+import com.hanaieum.server.domain.account.entity.Account;
 import com.hanaieum.server.domain.account.service.AccountService;
+import com.hanaieum.server.domain.autoTransfer.service.AutoTransferScheduleService;
+import com.hanaieum.server.domain.coupon.service.CouponService;
+import com.hanaieum.server.domain.transaction.entity.ReferenceType;
+import com.hanaieum.server.domain.transaction.service.TransactionService;
+import com.hanaieum.server.domain.transfer.service.TransferService;
 import com.hanaieum.server.domain.bucketList.dto.*;
 import com.hanaieum.server.domain.bucketList.entity.BucketList;
 import com.hanaieum.server.domain.bucketList.entity.BucketListStatus;
@@ -20,6 +26,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.ArrayList;
@@ -34,6 +42,10 @@ public class BucketListServiceImpl implements BucketListService {
     private final BucketParticipantRepository bucketParticipantRepository;
     private final MemberRepository memberRepository;
     private final AccountService accountService;
+    private final TransferService transferService;
+    private final TransactionService transactionService;
+    private final AutoTransferScheduleService autoTransferScheduleService;
+    private final CouponService couponService;
 
     /**
      * 현재 로그인한 사용자 정보를 가져오는 공통 메서드
@@ -509,22 +521,77 @@ public class BucketListServiceImpl implements BucketListService {
         log.info("버킷리스트 삭제 요청: {}", bucketListId);
 
         Member member = getCurrentMember();
-        Long memberId = member.getId();
+        BucketList bucketList = getBucketListWithOwnershipValidation(bucketListId, member.getId());
 
-        // 삭제되지 않은 버킷리스트만 조회 (참여자 정보 포함)
-        BucketList bucketList = bucketListRepository.findByIdAndDeletedWithParticipants(bucketListId, false)
-                .orElseThrow(() -> new CustomException(ErrorCode.BUCKET_LIST_NOT_FOUND));
-
-        // 소유자 확인
-        if (!bucketList.getMember().getId().equals(memberId)) {
-            throw new CustomException(ErrorCode.BUCKET_LIST_ACCESS_DENIED);
+        // 진행중인 버킷리스트
+        if (bucketList.getStatus() == BucketListStatus.IN_PROGRESS) {
+            Account moneyBoxAccount = bucketList.getMoneyBoxAccount();
+            log.info("연결된 머니박스: {}", moneyBoxAccount.getId());
+            
+            // 진행중인 버킷리스트인 경우 머니박스의 잔액을 주계좌로 반환
+            if (bucketList.getStatus() == BucketListStatus.IN_PROGRESS) {
+                BigDecimal moneyBoxBalance = moneyBoxAccount.getBalance();
+                
+                if (moneyBoxBalance.compareTo(BigDecimal.ZERO) > 0) {
+                    // 주계좌 조회
+                    Account mainAccount = accountService.findMainAccountByMember(member);
+                    
+                    // 머니박스 → 주계좌 이체
+                    transferService.transferBetweenAccounts(
+                            moneyBoxAccount.getId(), 
+                            mainAccount.getId(), 
+                            moneyBoxBalance,
+                            ReferenceType.MONEY_BOX_WITHDRAW,
+                            bucketListId
+                    );
+                    
+                    log.info("버킷리스트 삭제로 인한 머니박스 잔액 이체 완료: {} → 주계좌, 금액: {}", moneyBoxAccount.getId(), moneyBoxBalance);
+                }
+            }
+            
+            // 머니박스 계좌 삭제 (Soft Delete)
+            moneyBoxAccount.setDeleted(true);
+            accountService.save(moneyBoxAccount);
+            log.info("머니박스 계좌 삭제 완료: {}", moneyBoxAccount.getId());
+            
+            // 관련 자동이체 스케줄 모두 삭제 및 비활성화
+            autoTransferScheduleService.deleteAllSchedulesForMoneyBox(moneyBoxAccount);
+            log.info("자동이체 스케줄 삭제 완료");
         }
 
-        // 소프트 삭제 (deleted 플래그를 true로 변경)
+        // 버킷리스트 소프트 삭제
         bucketList.setDeleted(true);
-
         bucketListRepository.save(bucketList);
+
         log.info("버킷리스트 삭제 완료: ID = {}", bucketListId);
+    }
+
+    /**
+     * 목표 달성 이자율 계산 (기간 기준 + 연금통장 우대 이자율)
+     */
+    private BigDecimal calculateInterestRate(Integer targetMonth, Account mainAccount) {
+        // 기본 이자율 계산
+        BigDecimal baseRate = switch (targetMonth) {
+            case 3  -> BigDecimal.valueOf(0.010); // 1.0%
+            case 6  -> BigDecimal.valueOf(0.015); // 1.5%
+            case 12 -> BigDecimal.valueOf(0.025); // 2.5%
+            case 24 -> BigDecimal.valueOf(0.032); // 3.2%
+            default -> BigDecimal.valueOf(0.010); // 기본값: 3개월
+        };
+        
+        // 연금통장 우대 이자율 적용 (+1.0%)
+        if (mainAccount.getName().contains("연금")) {
+            BigDecimal originalRate = baseRate;
+            baseRate = baseRate.add(BigDecimal.valueOf(0.010));
+            log.info("연금통장 우대이자 적용 - 기간: {}개월, 기본: {}% + 우대: 1.0% = 최종: {}%", 
+                    targetMonth, originalRate.multiply(BigDecimal.valueOf(100)), 
+                    baseRate.multiply(BigDecimal.valueOf(100)));
+        } else {
+            log.info("이자율 계산 완료 - 기간: {}개월, 이자율: {}%", 
+                    targetMonth, baseRate.multiply(BigDecimal.valueOf(100)));
+        }
+        
+        return baseRate;
     }
 
     @Override
@@ -535,14 +602,95 @@ public class BucketListServiceImpl implements BucketListService {
         Member member = getCurrentMember();
         BucketList bucketList = getBucketListWithOwnershipValidation(bucketListId, member.getId());
 
-        // 완료 상태로 변경
+        // 이미 완료된 버킷리스트인지 확인
+        if (bucketList.getStatus() == BucketListStatus.COMPLETED) {
+            throw new CustomException(ErrorCode.BUCKET_LIST_ALREADY_COMPLETED);
+        }
+
+        // 오늘 날짜가 targetDate 이전이면 아직 달성 불가
+        if (LocalDate.now().isBefore(bucketList.getTargetDate())) {
+            throw new CustomException(ErrorCode.BUCKET_LIST_NOT_YET_AVAILABLE);
+        }
+
+        // 주계좌 조회
+        Account mainAccount = accountService.findMainAccountByMember(member);
+        
+        // 연결된 머니박스가 있는지 확인
+        Account moneyBoxAccount = bucketList.getMoneyBoxAccount();
+        
+        if (moneyBoxAccount != null) {
+            BigDecimal moneyBoxBalance = moneyBoxAccount.getBalance();
+            
+            // 1. 머니박스 → 주계좌로 원금 인출
+            if (moneyBoxBalance.compareTo(BigDecimal.ZERO) > 0) {
+                transferService.transferBetweenAccounts(
+                        moneyBoxAccount.getId(),
+                        mainAccount.getId(),
+                        moneyBoxBalance,
+                        ReferenceType.MONEY_BOX_WITHDRAW,
+                        bucketListId
+                );
+                log.info("목표 달성 원금 인출 완료: 머니박스 {} → 주계좌, 금액: {}", 
+                        moneyBoxAccount.getId(), moneyBoxBalance);
+            }
+            
+            // 2. 이자 계산 및 지급 (목표금액 한도 내에서만)
+            BigDecimal interestRate = calculateInterestRate(bucketList.getTargetMonth(), mainAccount);
+            
+            // 이자 계산 기준 금액은 목표금액과 실제 적립금 중 작은 금액
+            BigDecimal targetAmount = bucketList.getTargetAmount();
+            BigDecimal interestBaseAmount = moneyBoxBalance.min(targetAmount);
+            BigDecimal interest = interestBaseAmount.multiply(interestRate).setScale(0, RoundingMode.DOWN); // 원단위 절사 처리
+
+            log.info("이자 계산: 적립금 = {}, 목표금액 = {}, 이자 기준금액 = {}, 이자율 = {}%, 계산된 이자 = {}", 
+                    moneyBoxBalance, targetAmount, interestBaseAmount, 
+                    interestRate.multiply(BigDecimal.valueOf(100)), interest);
+
+            if (interest.compareTo(BigDecimal.ZERO) > 0) {
+                // 이자 입금 거래 기록 (상대방: 시스템/은행)
+                transactionService.recordDeposit(
+                        mainAccount, 
+                        interest,
+                        null, // 상대방 계좌 없음 (은행에서 지급)
+                        "하나이음", // 상대방 이름
+                        ReferenceType.MONEY_BOX_INTEREST,
+                        bucketListId
+                );
+                
+                // 실제 주계좌 잔액에 이자 추가
+                accountService.creditBalance(mainAccount.getId(), interest);
+                
+                log.info("목표 달성 이자 지급 완료: 주계좌 {}, 이자: {} (기준금액: {}, 이자율: {}%)", 
+                        mainAccount.getId(), interest, interestBaseAmount, interestRate.multiply(BigDecimal.valueOf(100)));
+            } else {
+                log.info("지급할 이자 없음: 기준금액 = {}", interestBaseAmount);
+            }
+            
+            // 3. 머니박스 계좌 삭제 (Soft Delete)
+            moneyBoxAccount.setDeleted(true);
+            accountService.save(moneyBoxAccount);
+            log.info("머니박스 계좌 삭제 완료: {}", moneyBoxAccount.getId());
+            
+            // 4. 관련 자동이체 스케줄 모두 삭제 및 비활성화
+            autoTransferScheduleService.deleteAllSchedulesForMoneyBox(moneyBoxAccount);
+            log.info("자동이체 스케줄 삭제 완료");
+        }
+
+        // 5. 버킷리스트 상태를 완료로 변경
         BucketListStatus previousStatus = bucketList.getStatus();
         bucketList.setStatus(BucketListStatus.COMPLETED);
-
         BucketList savedBucketList = bucketListRepository.save(bucketList);
 
-        log.info("버킷리스트 완료 처리 완료: ID = {}, {} -> COMPLETED",
-                bucketListId, previousStatus);
+        // 6. 쿠폰 발행
+        try {
+            couponService.createMemberCoupon(bucketListId);
+            log.info("버킷리스트 달성 쿠폰 발행 완료: bucketListId = {}", bucketListId);
+        } catch (Exception e) {
+            log.warn("쿠폰 발행 실패 (버킷리스트 달성은 완료됨): bucketListId = {}, error = {}", bucketListId, e.getMessage());
+            // 쿠폰 발행 실패해도 버킷리스트 달성은 성공으로 처리
+        }
+
+        log.info("버킷리스트 완료 처리 완료: ID = {}, {} -> COMPLETED", bucketListId, previousStatus);
 
         return BucketListResponse.of(savedBucketList);
     }

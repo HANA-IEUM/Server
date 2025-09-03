@@ -51,4 +51,11 @@ public interface AutoTransferScheduleService {
      * 스케줄 존재 여부 확인
      */
     boolean hasActiveSchedule(Account fromAccount, Account toAccount);
+    
+    /**
+     * 머니박스 삭제 시 관련된 모든 자동이체 스케줄 삭제
+     * - 주계좌 → 머니박스로의 모든 스케줄 삭제 (현재 + 미래)
+     * - 머니박스가 toAccount인 모든 스케줄을 대상으로 함
+     */
+    void deleteAllSchedulesForMoneyBox(Account moneyBoxAccount);
 }

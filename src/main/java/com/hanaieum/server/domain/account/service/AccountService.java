@@ -27,6 +27,7 @@ public interface AccountService {
     // === 계좌 조회 메서드 ===
     MainAccountResponse getMainAccount(Member member);
     Account getMainAccountByMemberId(Long memberId);
+    Account findMainAccountByMember(Member member); // 추가: Member 객체로 주계좌 조회
     Account findById(Long accountId);
     Account findByIdWithLock(Long accountId);
 
@@ -41,5 +42,8 @@ public interface AccountService {
     
     // === 머니박스 개수 조회 메서드 ===
     long getMoneyBoxCountByMember(Member member);
+    
+    // === 계좌 저장 메서드 ===
+    Account save(Account account);
 
 }

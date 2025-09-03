@@ -8,9 +8,10 @@ import lombok.RequiredArgsConstructor;
 public enum ReferenceType {
     MANUAL("이체"),
     AUTO_TRANSFER("자동이체"),
-    BUCKET_ACHIEVEMENT("목표 달성 인출"),
     BUCKET_FUNDING("후원"),
-    MONEY_BOX_TRANSFER("머니박스 충전");
+    MONEY_BOX_DEPOSIT("머니박스 충전"),
+    MONEY_BOX_WITHDRAW("머니박스 원금 인출"),
+    MONEY_BOX_INTEREST("머니박스 이자");
     
     private final String description;
 }

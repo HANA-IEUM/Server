@@ -37,6 +37,15 @@ public interface AutoTransferScheduleRepository extends JpaRepository<AutoTransf
         @Param("date") LocalDate date);
     
     /**
+     * 머니박스 계좌를 목적지로 하는 모든 자동이체 스케줄 조회 (삭제되지 않은 것만)
+     * - 머니박스 삭제 시 관련된 모든 스케줄 삭제를 위해 사용
+     */
+    @Query("SELECT ats FROM AutoTransferSchedule ats WHERE " +
+           "ats.toAccount = :moneyBoxAccount AND ats.deleted = false")
+    List<AutoTransferSchedule> findAllByToAccountAndDeletedFalse(
+        @Param("moneyBoxAccount") Account moneyBoxAccount);
+
+    /**
      * 특정 이체일에 실행될 자동이체 스케줄 조회 (배치 처리용) - 추후작성
      */
 }

@@ -41,7 +41,7 @@ public class MyBucketListDetailResponse {
                 .build();
 
         // canComplete 계산: COMPLETED이면 false, IN_PROGRESS이면서 오늘날짜가 targetDate를 지났거나 같으면 true
-        boolean canComplete = bucketList.getStatus() == com.hanaieum.server.domain.bucketList.entity.BucketListStatus.IN_PROGRESS
+        boolean canComplete = bucketList.getStatus() == BucketListStatus.IN_PROGRESS
                 && (LocalDate.now().isEqual(bucketList.getTargetDate()) || LocalDate.now().isAfter(bucketList.getTargetDate()));
 
         return MyBucketListDetailResponse.builder()

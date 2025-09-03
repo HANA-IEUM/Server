@@ -44,6 +44,8 @@ public enum ErrorCode {
     BUCKET_LIST_ACCESS_DENIED("BUCKET_LIST_002", "버킷리스트에 접근할 권한이 없습니다", HttpStatus.FORBIDDEN),
     BUCKET_LIST_ALREADY_DELETED("BUCKET_LIST_003", "이미 삭제된 버킷리스트입니다", HttpStatus.BAD_REQUEST),
     BUCKET_LIST_NOT_COMPLETED("BUCKET_LIST_004", "완료되지 않은 버킷리스트입니다", HttpStatus.CONFLICT),
+    BUCKET_LIST_ALREADY_COMPLETED("BUCKET_LIST_005", "이미 완료된 버킷리스트입니다", HttpStatus.CONFLICT),
+    BUCKET_LIST_NOT_YET_AVAILABLE("BUCKET_LIST_006", "아직 달성할 수 없는 버킷리스트입니다", HttpStatus.CONFLICT),
 
     // 머니박스 관련 에러
     MONEY_BOX_SETTINGS_NOT_FOUND("MONEY_BOX_001", "머니박스 설정을 찾을 수 없습니다", HttpStatus.NOT_FOUND),

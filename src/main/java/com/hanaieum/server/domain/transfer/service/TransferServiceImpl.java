@@ -42,7 +42,7 @@ public class TransferServiceImpl implements TransferService {
         
         // 4. 이체 실행
         executeTransfer(fromAccount, moneyBoxAccountId, amount, password, 
-                      ReferenceType.MONEY_BOX_TRANSFER, null);
+                      ReferenceType.MONEY_BOX_DEPOSIT, null);
         
         log.info("머니박스 채우기 완료 - 회원 ID: {}, 머니박스: {}, 금액: {}", memberId, moneyBoxAccountId, amount);
     }
@@ -65,21 +65,27 @@ public class TransferServiceImpl implements TransferService {
     }
 
     @Override
-    public void achieveBucket(Long memberId, Long bucketId, BigDecimal amount, String password) {
-        log.info("버킷 달성 인출 시작 - 회원 ID: {}, 버킷 ID: {}, 금액: {}", memberId, bucketId, amount);
-        
-        // 1. 회원의 주계좌 조회
-        Account toAccount = accountService.getMainAccountByMemberId(memberId);
-        
-        // 2. 버킷리스트 ID로 머니박스 계좌 조회 및 소유권 검증
-        Long moneyBoxAccountId = getMoneyBoxAccountIdByBucketId(bucketId);
-        accountService.validateAccountOwnership(moneyBoxAccountId, memberId);
-        
-        // 3. 이체 실행 (머니박스 → 주계좌)
-        executeTransfer(accountService.findById(moneyBoxAccountId), toAccount.getId(), 
-                      amount, password, ReferenceType.BUCKET_ACHIEVEMENT, bucketId);
-        
-        log.info("버킷 달성 인출 완료 - 회원 ID: {}, 버킷 ID: {}, 금액: {}", memberId, bucketId, amount);
+    public void transferBetweenAccounts(Long fromAccountId, Long toAccountId, BigDecimal amount,
+                                        ReferenceType referenceType, Long referenceId) {
+        log.info("내부 시스템 이체 시작 - 출금: {}, 입금: {}, 금액: {}, 참조: {}", fromAccountId, toAccountId, amount, referenceType);
+
+        // 1. 계좌 조회 (잠금 적용)
+        Account fromAccount = accountService.findByIdWithLock(fromAccountId);
+        Account toAccount = accountService.findByIdWithLock(toAccountId);
+
+        // 2. 잔액 검증
+        if (fromAccount.getBalance().compareTo(amount) < 0) {
+            throw new CustomException(ErrorCode.INSUFFICIENT_BALANCE);
+        }
+
+        // 3. 계좌 잔액 업데이트
+        accountService.debitBalance(fromAccountId, amount);
+        accountService.creditBalance(toAccountId, amount);
+
+        // 4. 거래 내역 기록 (이중 기입 방식)
+        transactionService.recordTransfer(fromAccount, toAccount, amount, referenceType, referenceType.getDescription(), referenceId);
+
+        log.info("내부 시스템 이체 완료 - 출금: {}, 입금: {}, 금액: {}", fromAccountId, toAccountId, amount);
     }
 
     private void executeTransfer(Account fromAccount, Long toAccountId, BigDecimal amount, 
