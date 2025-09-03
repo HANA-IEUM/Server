@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.ArrayList;
 
 @Slf4j
 @Service
@@ -188,7 +189,7 @@ public class BucketListServiceImpl implements BucketListService {
         Long memberId = member.getId();
 
         // 삭제되지 않은 해당 회원이 참여중인 버킷리스트 조회 (참여일 기준 내림차순)
-        List<BucketList> bucketLists = bucketListRepository.findParticipatedBucketListsByMember(memberId, false);
+        List<BucketList> bucketLists = bucketListRepository.findByParticipantMemberId(memberId);
 
         log.info("참여중인 버킷리스트 목록 조회 완료: 총 {}개", bucketLists.size());
 
@@ -239,12 +240,33 @@ public class BucketListServiceImpl implements BucketListService {
             throw new CustomException(ErrorCode.MEMBER_NOT_FOUND);
         }
 
-        // 그룹원의 진행중인 공개 버킷리스트 조회
-        List<BucketList> bucketLists = bucketListRepository.findByGroupMemberIdAndInProgressAndPublic(groupMemberId);
+        // 1. 그룹원의 모든 진행중인 버킷리스트 조회 (공개 여부 상관없이)
+        List<BucketList> allBucketLists = bucketListRepository.findByGroupMemberIdAndInProgress(groupMemberId);
+        
+        // 2. 본인이 참여자인 비공개 진행중인 버킷리스트 조회
+        List<BucketList> participatedBucketLists = bucketListRepository.findByParticipantMemberId(currentMember.getId())
+                .stream()
+                .filter(bl -> bl.getMember().getId().equals(groupMemberId) && bl.getStatus() == BucketListStatus.IN_PROGRESS)
+                .toList();
 
-        log.info("그룹원의 진행중인 버킷리스트 목록 조회 완료: groupMemberId = {}, 총 {}개", groupMemberId, bucketLists.size());
+        // 3. 접근 가능한 버킷리스트 필터링 (공개된 것 + 참여자인 것)
+        List<BucketList> accessibleBucketLists = new ArrayList<>();
+        
+        for (BucketList bucketList : allBucketLists) {
+            // 공개된 버킷리스트이거나 본인이 참여자인 경우
+            if (bucketList.isPublicFlag() || 
+                participatedBucketLists.stream().anyMatch(p -> p.getId().equals(bucketList.getId()))) {
+                accessibleBucketLists.add(bucketList);
+            }
+        }
 
-        return bucketLists.stream()
+        // 4. 생성일 기준으로 정렬
+        accessibleBucketLists.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
+
+        log.info("그룹원의 진행중인 버킷리스트 목록 조회 완료: groupMemberId = {}, 총 {}개 (전체: {}, 접근가능: {})", 
+                groupMemberId, accessibleBucketLists.size(), allBucketLists.size(), accessibleBucketLists.size());
+
+        return accessibleBucketLists.stream()
                 .map(BucketListResponse::of)
                 .toList();
     }
@@ -270,12 +292,33 @@ public class BucketListServiceImpl implements BucketListService {
             throw new CustomException(ErrorCode.MEMBER_NOT_FOUND);
         }
 
-        // 그룹원의 완료된 공개 버킷리스트 조회
-        List<BucketList> bucketLists = bucketListRepository.findByGroupMemberIdAndCompletedAndPublic(groupMemberId);
+        // 1. 그룹원의 모든 완료된 버킷리스트 조회 (공개 여부 상관없이)
+        List<BucketList> allBucketLists = bucketListRepository.findByGroupMemberIdAndCompleted(groupMemberId);
+        
+        // 2. 본인이 참여자인 비공개 완료된 버킷리스트 조회
+        List<BucketList> participatedBucketLists = bucketListRepository.findByParticipantMemberId(currentMember.getId())
+                .stream()
+                .filter(bl -> bl.getMember().getId().equals(groupMemberId) && bl.getStatus() == BucketListStatus.COMPLETED)
+                .toList();
 
-        log.info("그룹원의 완료된 버킷리스트 목록 조회 완료: groupMemberId = {}, 총 {}개", groupMemberId, bucketLists.size());
+        // 3. 접근 가능한 버킷리스트 필터링 (공개된 것 + 참여자인 것)
+        List<BucketList> accessibleBucketLists = new ArrayList<>();
+        
+        for (BucketList bucketList : allBucketLists) {
+            // 공개된 버킷리스트이거나 본인이 참여자인 경우
+            if (bucketList.isPublicFlag() || 
+                participatedBucketLists.stream().anyMatch(p -> p.getId().equals(bucketList.getId()))) {
+                accessibleBucketLists.add(bucketList);
+            }
+        }
 
-        return bucketLists.stream()
+        // 4. 생성일 기준으로 정렬
+        accessibleBucketLists.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
+
+        log.info("그룹원의 완료된 버킷리스트 목록 조회 완료: groupMemberId = {}, 총 {}개 (전체: {}, 접근가능: {})", 
+                groupMemberId, accessibleBucketLists.size(), allBucketLists.size(), accessibleBucketLists.size());
+
+        return accessibleBucketLists.stream()
                 .map(BucketListResponse::of)
                 .toList();
     }
