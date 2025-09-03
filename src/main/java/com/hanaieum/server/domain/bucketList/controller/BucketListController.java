@@ -2,7 +2,6 @@ package com.hanaieum.server.domain.bucketList.controller;
 
 import com.hanaieum.server.common.dto.ApiResponse;
 import com.hanaieum.server.domain.bucketList.dto.*;
-import com.hanaieum.server.domain.bucketList.entity.BucketListStatus;
 import com.hanaieum.server.domain.bucketList.service.BucketListService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;

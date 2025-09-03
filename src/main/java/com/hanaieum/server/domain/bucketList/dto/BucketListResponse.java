@@ -5,6 +5,7 @@ import com.hanaieum.server.domain.bucketList.entity.BucketListStatus;
 import com.hanaieum.server.domain.bucketList.entity.BucketListType;
 import lombok.*;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -22,6 +23,7 @@ public class BucketListResponse {
 
     private boolean publicFlag; // 공개여부
     private boolean togetherFlag; // 혼자/같이 여부
+    private LocalDate targetDate; // 목표기간 종료날짜
 
     private BucketListStatus status; // 상태
     private LocalDateTime createdAt; // 생성일시
@@ -42,6 +44,7 @@ public class BucketListResponse {
                 .title(bucketList.getTitle())
                 .publicFlag(bucketList.isPublicFlag())
                 .togetherFlag(bucketList.isShareFlag())
+                .targetDate(bucketList.getTargetDate())
                 .status(bucketList.getStatus())
                 .createdAt(bucketList.getCreatedAt())
                 .participants(participants)
