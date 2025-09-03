@@ -104,7 +104,7 @@ public class BucketListController {
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
-    @Operation(summary = "그룹원의 진행중인 버킷리스트 목록 조회", description = "같은 그룹에 속한 멤버의 진행중인 공개 버킷리스트 목록을 조회합니다.")
+    @Operation(summary = "그룹원의 진행중인 버킷리스트 목록 조회", description = "같은 그룹에 속한 멤버의 진행중인 버킷리스트 목록을 조회합니다. 공개된 버킷리스트와 본인이 참여자인 비공개 버킷리스트가 조회됩니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "그룹원 진행중인 버킷리스트 목록 조회 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
@@ -119,7 +119,7 @@ public class BucketListController {
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
-    @Operation(summary = "그룹원의 종료된 버킷리스트 목록 조회", description = "같은 그룹에 속한 멤버의 종료된 공개 버킷리스트 목록을 조회합니다.")
+    @Operation(summary = "그룹원의 종료된 버킷리스트 목록 조회", description = "같은 그룹에 속한 멤버의 종료된 버킷리스트 목록을 조회합니다. 공개된 버킷리스트와 본인이 참여자인 비공개 버킷리스트가 조회됩니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "그룹원 종료된 버킷리스트 목록 조회 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 실패"),
