@@ -26,7 +26,7 @@ public class CouponController {
     private final CouponService couponService;
 
     // 쿠폰 수동 생성
-    @Operation(summary = "쿠폰 수동 생성", description = "테스트용 쿠폰 수동 생성 api")
+    @Operation(summary = "쿠폰 수동 생성", description = "테스트용 쿠폰 수동 생성 api -> 쿠폰 발행 api에서 서비스메서드 호출로 변경 예정")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "쿠폰 생성 성공"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "미달성된 버킷리스트"),

@@ -19,7 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.stream.Collectors;
 
@@ -52,16 +51,14 @@ public class CouponServiceImpl implements CouponService {
         return couponCode;
     }
 
-    // 버킷리스트 targetMonths별로 사용자 쿠폰 할인율 반영
-    private static final Map<String, Integer> DISCOUNT_MAP = Map.of(
-            "3", 5,
-            "6", 10,
-            "12", 15,
-            "24", 20
-    );
-
-    public Integer getDiscountRate(String targetMonths) {
-        return DISCOUNT_MAP.getOrDefault(targetMonths, 5);
+    public int getDiscountRate(int targetMonth) {
+        return switch (targetMonth) {
+            case 3 -> 5;
+            case 6 -> 10;
+            case 12 -> 15;
+            case 24 -> 20;
+            default -> throw new CustomException(ErrorCode.INVALID_INPUT_VALUE);
+        };
     }
 
     @Override
@@ -83,9 +80,8 @@ public class CouponServiceImpl implements CouponService {
         // 타입별 쿠폰에서 랜덤으로 해당 타입 쿠폰 하나 가져오기
         Coupon coupon = coupons.get(new Random().nextInt(coupons.size()));
 
-//        // bucket에 targetMonths 생기면 이걸로 변경
-//        int discountRate = getDiscountRate(bucket.getTargetMonths());
-        int discountRate = getDiscountRate("12");
+        // 버킷리스트의 targetMonth 별로 쿠폰 할인율 설정
+        int discountRate = getDiscountRate(bucket.getTargetMonth());
 
         String couponCode = generateCouponCode();
 
@@ -108,9 +104,6 @@ public class CouponServiceImpl implements CouponService {
     public List<CouponResponse> getCoupons(Long memberId) {
 
         List<MemberCoupon> coupons = memberCouponRepository.findAllByMember_Id(memberId);
-//        if (coupons.isEmpty()) {
-//            throw new CustomException(ErrorCode.COUPON_NOT_FOUND);
-//        }
 
         List<CouponResponse> couponResponses = coupons
                 .stream()
