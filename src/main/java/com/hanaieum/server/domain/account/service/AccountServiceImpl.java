@@ -60,18 +60,25 @@ public class AccountServiceImpl implements AccountService {
     
     @Override
     public Long createMainAccount(Member member) {
-        // 통장 이름 목록
-        List<String> accountNames = Arrays.asList(
-            "주거래하나 통장",
-            "하나 플러스 통장", 
-            "하나더넥스트 연금 통장"
-        );
+        String accountName;
         
-        SecureRandom random = new SecureRandom();
-        String randomAccountName = accountNames.get(random.nextInt(accountNames.size()));
+        // 1965년 이하 출생자(65세 이상)는 연금통장 고정
+        int birthYear = member.getBirthDate().getYear();
+        if (birthYear <= 1965) {
+            accountName = "하나더넥스트 연금 통장";
+        } else {
+            // 일반 통장 이름 목록 중 랜덤 선택
+            List<String> accountNames = Arrays.asList(
+                "주거래하나 통장",
+                "하나 플러스 통장"
+            );
+            
+            SecureRandom random = new SecureRandom();
+            accountName = accountNames.get(random.nextInt(accountNames.size()));
+        }
         
         // 주계좌 생성 (잔액: 7천만원, 비밀번호: 1234)
-        return createAccount(member, randomAccountName, "하나은행", AccountType.MAIN, new BigDecimal("70000000"), "1234");
+        return createAccount(member, accountName, "하나은행", AccountType.MAIN, new BigDecimal("70000000"), "1234");
     }
     
     @Override
@@ -204,6 +211,17 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     @Transactional(readOnly = true)
+    public Account findMainAccountByMember(Member member) {
+        Account mainAccount = accountRepository.findByMemberAndAccountTypeAndDeletedFalse(member, AccountType.MAIN)
+                .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
+
+        log.info("주계좌 조회 완료 - 회원 ID: {}, 계좌 ID: {}", member.getId(), mainAccount.getId());
+        
+        return mainAccount;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Account findById(Long accountId) {
         return accountRepository.findByIdAndDeletedFalse(accountId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
@@ -272,6 +290,15 @@ public class AccountServiceImpl implements AccountService {
         
         log.info("머니박스 개수 조회 완료: memberId = {}, count = {}", member.getId(), count);
         return count;
+    }
+    
+    @Override
+    @Transactional
+    public Account save(Account account) {
+        log.info("계좌 저장: accountId = {}", account.getId());
+        Account savedAccount = accountRepository.save(account);
+        log.info("계좌 저장 완료: accountId = {}", savedAccount.getId());
+        return savedAccount;
     }
 
 }

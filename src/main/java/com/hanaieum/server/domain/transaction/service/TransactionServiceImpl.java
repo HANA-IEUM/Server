@@ -64,6 +64,29 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    public void recordDeposit(Account toAccount, BigDecimal amount, Long counterpartyAccountId,
+                             String counterpartyName, ReferenceType referenceType, Long referenceId) {
+
+        // 입금 레코드 생성
+        Transaction depositTx = Transaction.builder()
+                .account(toAccount)
+                .transactionType(TransactionType.DEPOSIT)
+                .amount(amount)
+                .balanceAfter(toAccount.getBalance()) // credit 이후 값
+                .counterpartyAccountId(counterpartyAccountId)
+                .counterpartyName(counterpartyName)
+                .description(referenceType.getDescription())
+                .referenceType(referenceType)
+                .referenceId(referenceId)
+                .build();
+
+        transactionRepository.save(depositTx);
+        
+        log.info("입금 거래 기록 생성 완료 - 계좌: {}, 금액: {}, 상대방: {}, 참조: {}", 
+                toAccount.getId(), amount, counterpartyName, referenceType);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public Page<TransactionResponse> getTransactionsByAccountId(Long memberId, Long accountId, Pageable pageable) {
 

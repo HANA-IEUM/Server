@@ -147,4 +147,33 @@ public class AutoTransferScheduleServiceImpl implements AutoTransferScheduleServ
         return !currentSchedule.getAmount().equals(amount) ||
                !currentSchedule.getTransferDay().equals(transferDay);
     }
+    
+    @Override
+    public void deleteAllSchedulesForMoneyBox(Account moneyBoxAccount) {
+        log.info("머니박스 삭제에 따른 모든 자동이체 스케줄 삭제 시작: moneyBoxAccountId={}", moneyBoxAccount.getId());
+        
+        // 머니박스를 목적지로 하는 모든 스케줄 조회 (삭제되지 않은 것만)
+        List<AutoTransferSchedule> allSchedules = autoTransferScheduleRepository
+                .findAllByToAccountAndDeletedFalse(moneyBoxAccount);
+        
+        if (allSchedules.isEmpty()) {
+            log.info("삭제할 자동이체 스케줄이 없음: moneyBoxAccountId={}", moneyBoxAccount.getId());
+            return;
+        }
+        
+        // 모든 스케줄을 삭제 처리 (Soft Delete)
+        for (AutoTransferSchedule schedule : allSchedules) {
+            schedule.setDeleted(true);
+            schedule.setActive(false); // 활성화도 함께 해제
+            
+            log.debug("자동이체 스케줄 삭제: scheduleId={}, fromAccountId={}, toAccountId={}, validFrom={}", 
+                    schedule.getId(), schedule.getFromAccount().getId(), 
+                    schedule.getToAccount().getId(), schedule.getValidFrom());
+        }
+        
+        autoTransferScheduleRepository.saveAll(allSchedules);
+        
+        log.info("머니박스 삭제에 따른 모든 자동이체 스케줄 삭제 완료: moneyBoxAccountId={}, 삭제된 스케줄 수={}", 
+                moneyBoxAccount.getId(), allSchedules.size());
+    }
 }
