@@ -1,8 +1,8 @@
 package com.hanaieum.server.domain.bucketList.entity;
 
 import com.hanaieum.server.common.entity.BaseEntity;
-import com.hanaieum.server.domain.member.entity.Member;
 import com.hanaieum.server.domain.account.entity.Account;
+import com.hanaieum.server.domain.member.entity.Member;
 import jakarta.persistence.*;
 import lombok.*;
 

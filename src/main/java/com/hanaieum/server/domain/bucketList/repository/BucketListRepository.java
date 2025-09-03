@@ -25,14 +25,6 @@ public interface BucketListRepository extends JpaRepository<BucketList, Long> {
     @Query("SELECT bl FROM BucketList bl LEFT JOIN FETCH bl.participants p LEFT JOIN FETCH p.member WHERE bl.id = :id AND bl.deleted = :deleted")
     Optional<BucketList> findByIdAndDeletedWithParticipants(@Param("id") Long id, @Param("deleted") boolean deleted);
 
-    // 그룹원들의 버킷리스트 조회 (공개된 것만)
-    @Query("SELECT bl FROM BucketList bl WHERE bl.member.group = :group AND bl.deleted = false AND bl.publicFlag = true ORDER BY bl.createdAt DESC")
-    List<BucketList> findByMemberGroupAndPublicOrderByCreatedAtDesc(@Param("group") Group group);
-
-    // 특정 그룹원의 특정 버킷리스트 조회 (공개된 것만)
-    @Query("SELECT bl FROM BucketList bl WHERE bl.id = :bucketListId AND bl.member.group = :group AND bl.deleted = false AND bl.publicFlag = true")
-    Optional<BucketList> findByIdAndMemberGroupAndPublic(@Param("bucketListId") Long bucketListId, @Param("group") Group group);
-
     // 그룹원의 진행중인 버킷리스트 목록 조회 (공개된 것만)
     @Query("SELECT bl FROM BucketList bl WHERE bl.member.id = :groupMemberId AND bl.status = 'IN_PROGRESS' AND bl.deleted = false AND bl.publicFlag = true ORDER BY bl.createdAt DESC")
     List<BucketList> findByGroupMemberIdAndInProgressAndPublic(@Param("groupMemberId") Long groupMemberId);

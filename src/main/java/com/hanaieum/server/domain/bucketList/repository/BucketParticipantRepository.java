@@ -11,9 +11,9 @@ import java.util.Optional;
 
 @Repository
 public interface BucketParticipantRepository extends JpaRepository<BucketParticipant, Long> {
-    
+
     // 수정 기능을 위한 추가 메서드들
     List<BucketParticipant> findByBucketListAndActive(BucketList bucketList, Boolean active);
-    
+
     Optional<BucketParticipant> findByBucketListAndMember(BucketList bucketList, Member member);
 }

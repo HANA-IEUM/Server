@@ -1,7 +1,6 @@
 package com.hanaieum.server.domain.bucketList.service;
 
 import com.hanaieum.server.domain.bucketList.dto.*;
-import com.hanaieum.server.domain.bucketList.entity.BucketListStatus;
 
 import java.util.List;
 
