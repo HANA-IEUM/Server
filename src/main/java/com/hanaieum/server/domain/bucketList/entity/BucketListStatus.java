@@ -2,13 +2,15 @@ package com.hanaieum.server.domain.bucketList.entity;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.context.annotation.RequestScope;
 
 @Getter
 @RequiredArgsConstructor
 public enum BucketListStatus {
 
     IN_PROGRESS("진행중"),
-    COMPLETED("달성완료");
+    COMPLETED("달성완료"),
+    PARTICIPATED("참여중");
 
     private final String description;
 }
