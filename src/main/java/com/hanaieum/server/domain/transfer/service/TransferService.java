@@ -10,5 +10,7 @@ public interface TransferService {
     void sponsorBucket(Long sponsorMemberId, Long bucketId, BigDecimal amount, String password);
 
     BigDecimal withdrawAllFromMoneyBox(Long memberId, Long moneyBoxAccountId, ReferenceType referenceType, Long referenceId);
+
+    void payInterest(Long memberId, BigDecimal interestAmount, Long bucketListId);
     
 }

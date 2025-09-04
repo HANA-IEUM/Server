@@ -612,8 +612,6 @@ public class BucketListServiceImpl implements BucketListService {
         Account moneyBoxAccount = bucketList.getMoneyBoxAccount();
         
         if (moneyBoxAccount != null) {
-            BigDecimal moneyBoxBalance = moneyBoxAccount.getBalance();
-            
             // 1. 머니박스 → 주계좌로 원금 인출
             BigDecimal withdrawnAmount = transferService.withdrawAllFromMoneyBox(
                     member.getId(),
@@ -624,39 +622,20 @@ public class BucketListServiceImpl implements BucketListService {
             log.info("목표 달성 원금 인출 완료: 머니박스 {} → 주계좌, 인출금액: {}", 
                     moneyBoxAccount.getId(), withdrawnAmount);
             
-            // 인출된 금액을 이자 계산의 기준으로 사용
-            moneyBoxBalance = withdrawnAmount;
-            
             // 2. 이자 계산 및 지급 (목표금액 한도 내에서만)
             BigDecimal interestRate = calculateInterestRate(bucketList.getTargetMonth(), mainAccount);
             
-            // 이자 계산 기준 금액은 목표금액과 실제 적립금 중 작은 금액
+            // 이자 계산 기준 금액은 목표금액과 실제 인출금액 중 작은 금액
             BigDecimal targetAmount = bucketList.getTargetAmount();
-            BigDecimal interestBaseAmount = moneyBoxBalance.min(targetAmount);
+            BigDecimal interestBaseAmount = withdrawnAmount.min(targetAmount);
             BigDecimal interest = interestBaseAmount.multiply(interestRate).setScale(0, RoundingMode.DOWN); // 원단위 절사 처리
 
-            log.info("이자 계산: 적립금 = {}, 목표금액 = {}, 이자 기준금액 = {}, 이자율 = {}%, 계산된 이자 = {}", 
-                    moneyBoxBalance, targetAmount, interestBaseAmount, 
+            log.info("이자 계산: 인출금액 = {}, 목표금액 = {}, 이자 기준금액 = {}, 이자율 = {}%, 계산된 이자 = {}", 
+                    withdrawnAmount, targetAmount, interestBaseAmount, 
                     interestRate.multiply(BigDecimal.valueOf(100)), interest);
 
             if (interest.compareTo(BigDecimal.ZERO) > 0) {
-                // 이자 입금 거래 기록 (상대방: 시스템/은행)
-                transactionService.recordDeposit(
-                        mainAccount, 
-                        interest,
-                        null, // 상대방 계좌 없음 (은행에서 지급)
-                        "하나이음", // 상대방 이름
-                        ReferenceType.MONEY_BOX_INTEREST,
-                        bucketListId
-                );
-                
-                // 실제 주계좌 잔액에 이자 추가
-                accountService.creditBalance(mainAccount.getId(), interest);
-                
-                log.info("목표 달성 이자 지급 완료: 주계좌 {}, 이자: {} (기준금액: {}, 이자율: {}%)", 
-                        mainAccount.getId(), interest, interestBaseAmount, interestRate.multiply(BigDecimal.valueOf(100)));
-            } else {
-                log.info("지급할 이자 없음: 기준금액 = {}", interestBaseAmount);
+                transferService.payInterest(member.getId(), interest, bucketListId);
             }
             
             // 3. 머니박스 계좌 삭제 (Soft Delete)
