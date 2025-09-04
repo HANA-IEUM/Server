@@ -1,0 +1,63 @@
+server:
+  port: 0  # 랜덤 포트 사용
+
+spring:
+  application:
+    name: hana-ieum-server-test
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MySQL
+    username: sa
+    password: 
+  jpa:
+    hibernate:
+      ddl-auto: create-drop  # 테스트 시마다 스키마 재생성
+    properties:
+      hibernate:
+        show_sql: true
+        format_sql: true
+        dialect: org.hibernate.dialect.H2Dialect
+        jdbc:
+          time_zone: Asia/Seoul
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+# 테스트용 JWT 설정 (고정된 값 사용)
+jwt:
+  secret: test-secret-key-for-jwt-token-generation-and-validation
+  access-expiration: 3600000
+  refresh-expiration: 604800000
+
+# 테스트용 CORS 설정
+cors:
+  allowed-origins: http://localhost:3000,http://localhost:5173
+
+# 테스트용 Solapi 설정 (더미 값)
+solapi:
+  api-key: test-api-key
+  api-secret: test-api-secret
+  sender: 01012345678
+
+# 테스트용 AWS S3 설정 (더미 값)
+aws:
+  access-key: test-access-key
+  secret-key: test-secret-key
+  region: ap-northeast-2
+  bucket: test-bucket
+
+# Springdoc OpenAPI 설정 (테스트에서는 비활성화)
+springdoc:
+  swagger-ui:
+    enabled: false
+  api-docs:
+    enabled: false
+
+# 로깅 설정
+logging:
+  level:
+    com.hanaieum.server: DEBUG
+    org.springframework.security: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE

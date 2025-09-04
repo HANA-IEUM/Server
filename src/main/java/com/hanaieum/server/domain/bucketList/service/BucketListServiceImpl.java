@@ -41,6 +41,7 @@ public class BucketListServiceImpl implements BucketListService {
     private final BucketListRepository bucketListRepository;
     private final BucketParticipantRepository bucketParticipantRepository;
     private final MemberRepository memberRepository;
+
     private final AccountService accountService;
     private final TransferService transferService;
     private final TransactionService transactionService;
@@ -117,11 +118,11 @@ public class BucketListServiceImpl implements BucketListService {
             } catch (Exception e) {
                 log.warn("참여자 추가 실패 (버킷리스트 생성은 완료됨): bucketListId = {}, error = {}",
                         savedBucketList.getId(), e.getMessage());
-                // 참여자 추가 실패해도 버킷리스트 생성은 성공으로 처리
+                // 참여자 추가 실패해도 버킷리스트 생성은 성공 처리
             }
-        }
+            }
 
-        // 머니박스 자동 생성 (옵션이 true인 경우)
+        // 머니박스 자동 생성
         if (requestDto.getCreateMoneyBox() != null && requestDto.getCreateMoneyBox()) {
             try {
                 // 자동이체 정보가 있는 경우 자동이체 포함하여 생성
@@ -141,7 +142,7 @@ public class BucketListServiceImpl implements BucketListService {
                     log.info("버킷리스트와 연동된 머니박스 및 자동이체 생성 완료: bucketListId = {}, monthlyAmount = {}, transferDay = {}일",
                             savedBucketList.getId(), requestDto.getMonthlyAmount(), transferDay);
                 } else {
-                    // 기존 방식: 자동이체 없이 머니박스만 생성
+                    // 자동이체 없이 머니박스만 생성
                     accountService.createMoneyBoxForBucketList(
                             savedBucketList,
                             member,
@@ -542,7 +543,7 @@ public class BucketListServiceImpl implements BucketListService {
                         moneyBoxAccount.getId(), withdrawnAmount);
             }
             
-            // 머니박스 계좌 삭제 (Soft Delete)
+            // 머니박스 계좌 삭제
             moneyBoxAccount.setDeleted(true);
             accountService.save(moneyBoxAccount);
             log.info("머니박스 계좌 삭제 완료: {}", moneyBoxAccount.getId());
@@ -552,7 +553,7 @@ public class BucketListServiceImpl implements BucketListService {
             log.info("자동이체 스케줄 삭제 완료");
         }
 
-        // 버킷리스트 소프트 삭제
+        // 버킷리스트 삭제
         bucketList.setDeleted(true);
         bucketListRepository.save(bucketList);
 
@@ -638,7 +639,7 @@ public class BucketListServiceImpl implements BucketListService {
                 transferService.payInterest(member.getId(), interest, bucketListId);
             }
             
-            // 3. 머니박스 계좌 삭제 (Soft Delete)
+            // 3. 머니박스 계좌 삭제
             moneyBoxAccount.setDeleted(true);
             accountService.save(moneyBoxAccount);
             log.info("머니박스 계좌 삭제 완료: {}", moneyBoxAccount.getId());
@@ -673,7 +674,7 @@ public class BucketListServiceImpl implements BucketListService {
 
         Member member = getCurrentMember();
 
-        // 현재 사용자의 소프트 삭제되지 않은 머니박스 개수 조회
+        // 현재 사용자의 삭제되지 않은 머니박스 개수 조회
         long currentMoneyBoxCount = accountService.getMoneyBoxCountByMember(member);
 
         // 최대 허용 개수 (20개)
