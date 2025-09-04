@@ -19,8 +19,6 @@ public interface BucketListRepository extends JpaRepository<BucketList, Long> {
     // 상태별 버킷리스트 조회
     List<BucketList> findByMemberAndStatusAndDeletedOrderByCreatedAtDesc(Member member, BucketListStatus status, boolean deleted);
 
-    Optional<BucketList> findByIdAndDeleted(Long id, boolean deleted);
-
     // 참여자 정보와 함께 버킷리스트 조회
     @Query("SELECT bl FROM BucketList bl LEFT JOIN FETCH bl.participants p LEFT JOIN FETCH p.member WHERE bl.id = :id AND bl.deleted = :deleted")
     Optional<BucketList> findByIdAndDeletedWithParticipants(@Param("id") Long id, @Param("deleted") boolean deleted);
