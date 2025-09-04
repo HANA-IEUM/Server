@@ -115,6 +115,31 @@ public class TransferServiceImpl implements TransferService {
         );
     }
 
+    @Override
+    public void payInterest(Long memberId, BigDecimal interestAmount, Long bucketListId) {
+        log.info("이자 지급 시작 - 회원 ID: {}, 이자: {}, 버킷리스트 ID: {}", memberId, interestAmount, bucketListId);
+
+        // 1. 회원의 주계좌 조회
+        Long mainAccountId = accountService.getMainAccountIdByMemberId(memberId);
+        Account mainAccount = accountService.findByIdWithLock(mainAccountId);
+
+        // 2. 실제 주계좌 잔액에 이자 추가
+        accountService.creditBalance(mainAccount.getId(), interestAmount);
+
+        // 3. 이자 거래 기록 생성 (상대방: 하나이음)
+        transactionService.recordDeposit(
+                mainAccount,
+                interestAmount,
+                null, // 상대방 계좌 없음 (은행에서 지급)
+                "하나이음", // 상대방 이름
+                ReferenceType.MONEY_BOX_INTEREST,
+                ReferenceType.MONEY_BOX_INTEREST.getDescription(),
+                bucketListId
+        );
+
+        log.info("목표 달성 이자 지급 완료: 주계좌 {}, 이자: {}", mainAccount.getId(), interestAmount);
+    }
+
     private Long getMoneyBoxAccountIdByBucketId(Long bucketId) {
         // 1. 버킷리스트 조회 -> 머니박스 계좌 ID 조회
         BucketList bucketList = bucketListRepository.findByIdAndDeletedFalse(bucketId)
@@ -131,28 +156,4 @@ public class TransferServiceImpl implements TransferService {
         return accountId;
     }
 
-    @Override
-    public void payInterest(Long memberId, BigDecimal interestAmount, Long bucketListId) {
-        log.info("이자 지급 시작 - 회원 ID: {}, 이자: {}, 버킷리스트 ID: {}", memberId, interestAmount, bucketListId);
-        
-        // 1. 회원의 주계좌 조회
-        Long mainAccountId = accountService.getMainAccountIdByMemberId(memberId);
-        Account mainAccount = accountService.findByIdWithLock(mainAccountId);
-        
-        // 2. 이자 거래 기록 생성 (상대방: 하나이음)
-        transactionService.recordDeposit(
-                mainAccount, 
-                interestAmount,
-                null, // 상대방 계좌 없음 (은행에서 지급)
-                "하나이음", // 상대방 이름
-                ReferenceType.MONEY_BOX_INTEREST,
-                ReferenceType.MONEY_BOX_INTEREST.getDescription(),
-                bucketListId
-        );
-        
-        // 3. 실제 주계좌 잔액에 이자 추가
-        accountService.creditBalance(mainAccount.getId(), interestAmount);
-        
-        log.info("목표 달성 이자 지급 완료: 주계좌 {}, 이자: {}", mainAccount.getId(), interestAmount);
-    }
 }
