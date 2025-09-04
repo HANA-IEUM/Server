@@ -65,7 +65,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public void recordDeposit(Account toAccount, BigDecimal amount, Long counterpartyAccountId,
-                             String counterpartyName, ReferenceType referenceType, Long referenceId) {
+                             String counterpartyName, ReferenceType referenceType, String description, Long referenceId) {
 
         // 입금 레코드 생성
         Transaction depositTx = Transaction.builder()
@@ -75,7 +75,7 @@ public class TransactionServiceImpl implements TransactionService {
                 .balanceAfter(toAccount.getBalance()) // credit 이후 값
                 .counterpartyAccountId(counterpartyAccountId)
                 .counterpartyName(counterpartyName)
-                .description(referenceType.getDescription())
+                .description(description)
                 .referenceType(referenceType)
                 .referenceId(referenceId)
                 .build();

@@ -15,7 +15,7 @@ public interface TransactionService {
 
     // 이자 입금을 위한 메소드
     void recordDeposit(Account toAccount, BigDecimal amount, Long counterpartyAccountId,
-                      String counterpartyName, ReferenceType referenceType, Long referenceId);
+                      String counterpartyName, ReferenceType referenceType, String description, Long referenceId);
     
     Page<TransactionResponse> getTransactionsByAccountId(Long memberId, Long accountId, Pageable pageable);
 }
