@@ -530,23 +530,16 @@ public class BucketListServiceImpl implements BucketListService {
             
             // 진행중인 버킷리스트인 경우 머니박스의 잔액을 주계좌로 반환
             if (bucketList.getStatus() == BucketListStatus.IN_PROGRESS) {
-                BigDecimal moneyBoxBalance = moneyBoxAccount.getBalance();
+                // 머니박스 → 주계좌 전액 인출
+                BigDecimal withdrawnAmount = transferService.withdrawAllFromMoneyBox(
+                        member.getId(),
+                        moneyBoxAccount.getId(),
+                        ReferenceType.MONEY_BOX_WITHDRAW,
+                        bucketListId
+                );
                 
-                if (moneyBoxBalance.compareTo(BigDecimal.ZERO) > 0) {
-                    // 주계좌 조회
-                    Account mainAccount = accountService.findMainAccountByMember(member);
-                    
-                    // 머니박스 → 주계좌 이체
-                    transferService.transferBetweenAccounts(
-                            moneyBoxAccount.getId(), 
-                            mainAccount.getId(), 
-                            moneyBoxBalance,
-                            ReferenceType.MONEY_BOX_WITHDRAW,
-                            bucketListId
-                    );
-                    
-                    log.info("버킷리스트 삭제로 인한 머니박스 잔액 이체 완료: {} → 주계좌, 금액: {}", moneyBoxAccount.getId(), moneyBoxBalance);
-                }
+                log.info("버킷리스트 삭제로 인한 머니박스 잔액 인출 완료: {} → 주계좌, 인출금액: {}", 
+                        moneyBoxAccount.getId(), withdrawnAmount);
             }
             
             // 머니박스 계좌 삭제 (Soft Delete)
@@ -622,17 +615,17 @@ public class BucketListServiceImpl implements BucketListService {
             BigDecimal moneyBoxBalance = moneyBoxAccount.getBalance();
             
             // 1. 머니박스 → 주계좌로 원금 인출
-            if (moneyBoxBalance.compareTo(BigDecimal.ZERO) > 0) {
-                transferService.transferBetweenAccounts(
-                        moneyBoxAccount.getId(),
-                        mainAccount.getId(),
-                        moneyBoxBalance,
-                        ReferenceType.MONEY_BOX_WITHDRAW,
-                        bucketListId
-                );
-                log.info("목표 달성 원금 인출 완료: 머니박스 {} → 주계좌, 금액: {}", 
-                        moneyBoxAccount.getId(), moneyBoxBalance);
-            }
+            BigDecimal withdrawnAmount = transferService.withdrawAllFromMoneyBox(
+                    member.getId(),
+                    moneyBoxAccount.getId(),
+                    ReferenceType.MONEY_BOX_WITHDRAW,
+                    bucketListId
+            );
+            log.info("목표 달성 원금 인출 완료: 머니박스 {} → 주계좌, 인출금액: {}", 
+                    moneyBoxAccount.getId(), withdrawnAmount);
+            
+            // 인출된 금액을 이자 계산의 기준으로 사용
+            moneyBoxBalance = withdrawnAmount;
             
             // 2. 이자 계산 및 지급 (목표금액 한도 내에서만)
             BigDecimal interestRate = calculateInterestRate(bucketList.getTargetMonth(), mainAccount);

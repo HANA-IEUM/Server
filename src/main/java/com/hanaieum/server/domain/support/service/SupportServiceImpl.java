@@ -92,7 +92,6 @@ public class SupportServiceImpl implements SupportService {
         }
 
         // 이체 실행 (후원자 주계좌 → 버킷리스트 머니박스)
-        // TransferService.sponsorBucket(sponsorMemberId, bucketId, amount, password)
         transferService.sponsorBucket(
                 supporter.getId(),
                 bucketList.getId(),
