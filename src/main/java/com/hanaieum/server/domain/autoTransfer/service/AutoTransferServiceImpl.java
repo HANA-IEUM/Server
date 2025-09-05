@@ -20,7 +20,6 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional
 public class AutoTransferServiceImpl implements AutoTransferService {
     
     private final AutoTransferScheduleRepository scheduleRepository;
@@ -156,11 +155,12 @@ public class AutoTransferServiceImpl implements AutoTransferService {
                  history.getId(), history.getSchedule().getId(), history.getRetryCount());
         
         try {
-            // 이체 재실행
-            executeActualTransfer(history.getSchedule());
+            // 이체 재실행 - History 기반 오버로딩 메서드 사용
+            executeActualTransfer(history);
             
             // 성공 처리
             history.updateStatus(AutoTransferStatus.SUCCESS, null);
+            historyRepository.save(history);
             log.info("자동이체 재시도 성공 - History ID: {}", history.getId());
             
         } catch (Exception e) {
@@ -177,6 +177,8 @@ public class AutoTransferServiceImpl implements AutoTransferService {
                 log.warn("자동이체 재시도 실패 - History ID: {}, Retry Count: {}, 사유: {}", 
                         history.getId(), history.getRetryCount(), e.getMessage());
             }
+
+            historyRepository.save(history);
             
             // 실패 시에도 예외를 다시 던져서 상위에서 실패 카운트 처리
             throw e;
@@ -184,7 +186,7 @@ public class AutoTransferServiceImpl implements AutoTransferService {
     }
     
     /**
-     * 실제 이체 실행 로직
+     * 실제 이체 실행 로직 - Schedule 기반 (정규 실행용)
      */
     private void executeActualTransfer(AutoTransferSchedule schedule) {
         transferService.executeAutoTransfer(
@@ -192,6 +194,18 @@ public class AutoTransferServiceImpl implements AutoTransferService {
             schedule.getToAccount().getId(),
             schedule.getAmount(),
             schedule.getId()
+        );
+    }
+    
+    /**
+     * 실제 이체 실행 로직 - History 기반 (재시도용)
+     */
+    private void executeActualTransfer(AutoTransferHistory history) {
+        transferService.executeAutoTransfer(
+            history.getFromAccount().getId(),
+            history.getToAccount().getId(),
+            history.getAmount(),
+            history.getSchedule().getId()
         );
     }
     

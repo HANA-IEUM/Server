@@ -14,10 +14,12 @@ public interface AutoTransferHistoryRepository extends JpaRepository<AutoTransfe
     
     /**
      * 재시도 대상 실패한 이체 조회 (특정 날짜, 특정 재시도 횟수)
-     * 유연한 설계라면 추후 재시도 횟수 범위로 변경 (startOfDay, endOfDay, minRetryCount, maxRetryCount)
+     * JOIN FETCH로 History의 fromAccount, toAccount를 미리 로딩하여 LazyInitializationException 방지
      */
-    @Query("SELECT h FROM AutoTransferHistory h WHERE " +
-           "h.executedAt >= :startOfDay " +
+    @Query("SELECT h FROM AutoTransferHistory h " +
+           "JOIN FETCH h.fromAccount " +
+           "JOIN FETCH h.toAccount " +
+           "WHERE h.executedAt >= :startOfDay " +
            "AND h.executedAt < :endOfDay " +
            "AND h.status IN ('FAILED', 'RETRY') " +
            "AND h.retryCount = :retryCount " +
