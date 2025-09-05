@@ -5,8 +5,11 @@ import com.hanaieum.server.common.exception.ErrorCode;
 import com.hanaieum.server.domain.account.entity.Account;
 import com.hanaieum.server.domain.account.service.AccountService;
 import com.hanaieum.server.domain.autoTransfer.service.AutoTransferScheduleService;
+import com.hanaieum.server.domain.bucketList.calculator.InterestCalculator;
 import com.hanaieum.server.domain.coupon.service.CouponService;
 import com.hanaieum.server.domain.transaction.entity.ReferenceType;
+import com.hanaieum.server.domain.transaction.entity.Transaction;
+import com.hanaieum.server.domain.transaction.entity.TransactionType;
 import com.hanaieum.server.domain.transaction.service.TransactionService;
 import com.hanaieum.server.domain.transfer.service.TransferService;
 import com.hanaieum.server.domain.bucketList.dto.*;
@@ -46,6 +49,7 @@ public class BucketListServiceImpl implements BucketListService {
     private final TransactionService transactionService;
     private final AutoTransferScheduleService autoTransferScheduleService;
     private final CouponService couponService;
+    private final InterestCalculator interestCalculator;
 
     /**
      * 현재 로그인한 사용자 정보를 가져오는 공통 메서드
@@ -624,15 +628,15 @@ public class BucketListServiceImpl implements BucketListService {
             
             // 2. 이자 계산 및 지급 (목표금액 한도 내에서만)
             BigDecimal interestRate = calculateInterestRate(bucketList.getTargetMonth(), mainAccount);
-            
-            // 이자 계산 기준 금액은 목표금액과 실제 인출금액 중 작은 금액
-            BigDecimal targetAmount = bucketList.getTargetAmount();
-            BigDecimal interestBaseAmount = withdrawnAmount.min(targetAmount);
-            BigDecimal interest = interestBaseAmount.multiply(interestRate).setScale(0, RoundingMode.DOWN); // 원단위 절사 처리
 
-            log.info("이자 계산: 인출금액 = {}, 목표금액 = {}, 이자 기준금액 = {}, 이자율 = {}%, 계산된 이자 = {}", 
-                    withdrawnAmount, targetAmount, interestBaseAmount, 
-                    interestRate.multiply(BigDecimal.valueOf(100)), interest);
+            // 버킷리스트의 머니박스 계좌에 입금된 내역 조회(targetDate 이전에 발생한 내역들만 createdAt 순서대로)
+            List<Transaction> transactions = transactionService.getTransactionsByTransactionType(moneyBoxAccount, TransactionType.DEPOSIT, bucketList.getTargetDate());
+
+            // 단리 이자 계산
+            BigDecimal interest = interestCalculator.calculateInterest(transactions, bucketList.getTargetDate(), bucketList.getTargetAmount(), interestRate);
+
+            log.info("이자 계산: 인출금액 = {}, 목표금액 = {}, 이자율 = {}%, 계산된 이자 = {}",
+                    withdrawnAmount, bucketList.getTargetAmount(), interestRate, interest);
 
             if (interest.compareTo(BigDecimal.ZERO) > 0) {
                 transferService.payInterest(member.getId(), interest, bucketListId);

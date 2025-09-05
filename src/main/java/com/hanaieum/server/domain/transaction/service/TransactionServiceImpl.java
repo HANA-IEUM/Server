@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -99,5 +101,11 @@ public class TransactionServiceImpl implements TransactionService {
                 memberId, accountId, pageable.getPageNumber(), pageable.getPageSize(), transactions.getTotalElements());
         
         return transactions.map(TransactionResponse::of);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Transaction> getTransactionsByTransactionType(Account account, TransactionType transactionType, LocalDate targetDate) {
+        return transactionRepository.findAllByAccountAndTransactionTypeAndCreatedAtBeforeOrderByCreatedAtAsc(account, transactionType, targetDate.atStartOfDay());
     }
 }

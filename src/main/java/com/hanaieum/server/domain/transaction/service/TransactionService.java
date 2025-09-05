@@ -3,10 +3,14 @@ package com.hanaieum.server.domain.transaction.service;
 import com.hanaieum.server.domain.account.entity.Account;
 import com.hanaieum.server.domain.transaction.dto.TransactionResponse;
 import com.hanaieum.server.domain.transaction.entity.ReferenceType;
+import com.hanaieum.server.domain.transaction.entity.Transaction;
+import com.hanaieum.server.domain.transaction.entity.TransactionType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
 
 public interface TransactionService {
     
@@ -18,4 +22,7 @@ public interface TransactionService {
                       String counterpartyName, ReferenceType referenceType, String description, Long referenceId);
     
     Page<TransactionResponse> getTransactionsByAccountId(Long memberId, Long accountId, Pageable pageable);
-}
+
+    List<Transaction> getTransactionsByTransactionType(Account account, TransactionType transactionType, LocalDate targetDate);
+
+    }
