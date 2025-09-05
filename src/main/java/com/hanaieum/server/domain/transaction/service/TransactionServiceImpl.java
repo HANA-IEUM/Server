@@ -19,13 +19,14 @@ import java.math.BigDecimal;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional
+@Transactional(readOnly = true)
 public class TransactionServiceImpl implements TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final AccountService accountService;
 
     @Override
+    @Transactional
     public void recordTransfer(Account fromAccount, Account toAccount, BigDecimal amount,
                                ReferenceType referenceType, String description, Long referenceId) {
 
@@ -64,6 +65,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    @Transactional
     public void recordDeposit(Account toAccount, BigDecimal amount, Long counterpartyAccountId,
                              String counterpartyName, ReferenceType referenceType, String description, Long referenceId) {
 
@@ -87,7 +89,6 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Page<TransactionResponse> getTransactionsByAccountId(Long memberId, Long accountId, Pageable pageable) {
 
         // 계좌 소유권 검증
