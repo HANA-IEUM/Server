@@ -69,6 +69,18 @@ public class TransferServiceImpl implements TransferService {
     }
 
     @Override
+    public void executeAutoTransfer(Long fromAccountId, Long toAccountId, BigDecimal amount, Long scheduleId) {
+        log.info("자동이체 실행 - 출금계좌: {}, 입금계좌: {}, 금액: {}, 스케줄ID: {}", 
+                fromAccountId, toAccountId, amount, scheduleId);
+
+        // 자동이체는 비밀번호 검증 없이 실행, scheduleId를 referenceId로 전달
+        executeTransfer(fromAccountId, toAccountId, amount, ReferenceType.AUTO_TRANSFER, scheduleId);
+
+        log.info("자동이체 실행 완료 - 출금계좌: {}, 입금계좌: {}, 금액: {}, 스케줄ID: {}", 
+                fromAccountId, toAccountId, amount, scheduleId);
+    }
+
+    @Override
     public BigDecimal withdrawAllFromMoneyBox(Long memberId, Long moneyBoxAccountId, ReferenceType referenceType, Long referenceId) {
         log.info("머니박스 전액 인출 시작 - 회원 ID: {}, 머니박스: {}, 참조: {}", memberId, moneyBoxAccountId, referenceType);
 

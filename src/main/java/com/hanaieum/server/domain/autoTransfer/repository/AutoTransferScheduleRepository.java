@@ -46,6 +46,18 @@ public interface AutoTransferScheduleRepository extends JpaRepository<AutoTransf
         @Param("moneyBoxAccount") Account moneyBoxAccount);
 
     /**
-     * 특정 이체일에 실행될 자동이체 스케줄 조회 (배치 처리용) - 추후작성
+     * 특정 이체일에 실행될 자동이체 스케줄 조회 (배치 처리용)
+     * 오늘 날짜의 "이체일"과 일치하는 스케줄
+     * 스케줄이 시작일(validFrom) 이후이며, 종료일(validTo)이 없거나 아직 종료되지 않은 스케줄
+     * 활성화되었으며 삭제 처리되지 않은 자동이체 스케줄
      */
+    @Query("SELECT ats FROM AutoTransferSchedule ats WHERE " +
+           "ats.transferDay = :targetDay AND " +
+           "ats.validFrom <= :targetDate AND " +
+           "(ats.validTo IS NULL OR ats.validTo >= :targetDate) AND " +
+           "ats.active = true AND ats.deleted = false")
+    List<AutoTransferSchedule> findSchedulesForExecution(
+        @Param("targetDate") LocalDate targetDate,
+        @Param("targetDay") Integer targetDay
+    );
 }

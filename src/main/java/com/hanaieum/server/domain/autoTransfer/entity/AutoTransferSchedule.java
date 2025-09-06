@@ -44,8 +44,8 @@ public class AutoTransferSchedule extends BaseEntity {
     private Boolean deleted = false; // 삭제 여부
     
     @Column(name = "valid_from", nullable = false)
-    private LocalDate validFrom; // 이 스케줄이 시작되는 달
+    private LocalDate validFrom; // 스케줄 시작일
     
     @Column(name = "valid_to")
-    private LocalDate validTo; // 이 스케줄이 끝나는 달 (null이면 현재 유효)
+    private LocalDate validTo; // 스케줄 종료일 (null이면 현재 유효)
 }
