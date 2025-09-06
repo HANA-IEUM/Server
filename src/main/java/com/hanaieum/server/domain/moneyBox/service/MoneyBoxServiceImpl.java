@@ -70,8 +70,7 @@ public class MoneyBoxServiceImpl implements MoneyBoxService {
     @Override
     public List<MoneyBoxResponse> getMyMoneyBoxList(Member member) {
         // 사용자의 모든 MONEY_BOX 타입 계좌 조회
-        List<Account> moneyBoxAccounts = accountRepository.findAllByMemberAndAccountTypeAndDeletedFalse(
-                member, AccountType.MONEY_BOX);
+        List<Account> moneyBoxAccounts = accountService.findMoneyBoxes(member);
         
         // 삭제된 버킷리스트와 연결된 머니박스는 제외
         List<Account> activeMoneyBoxAccounts = moneyBoxAccounts.stream()
@@ -103,7 +102,7 @@ public class MoneyBoxServiceImpl implements MoneyBoxService {
         }
         
         // 자동이체 스케줄 조회 (현재 + 미래)
-        Account mainAccount = accountRepository.findByMemberAndAccountTypeAndDeletedFalse(member, AccountType.MAIN)
+        Account mainAccount = accountService.findMainAccount(member)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
         
         Optional<AutoTransferSchedule> currentSchedule = autoTransferScheduleService
@@ -143,7 +142,7 @@ public class MoneyBoxServiceImpl implements MoneyBoxService {
      */
     private void updateAutoTransferSettings(Account moneyBoxAccount, Member member, MoneyBoxUpdateRequest request) {
         // 사용자의 주계좌 조회 (출금 계좌)
-        Account mainAccount = accountRepository.findByMemberAndAccountTypeAndDeletedFalse(member, AccountType.MAIN)
+        Account mainAccount = accountService.findMainAccount(member)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
         
         // AutoTransferScheduleService에 위임
@@ -163,7 +162,7 @@ public class MoneyBoxServiceImpl implements MoneyBoxService {
         LocalDate today = LocalDate.now();
         
         // 주계좌 조회
-        Account mainAccount = accountRepository.findByMemberAndAccountTypeAndDeletedFalse(member, AccountType.MAIN)
+        Account mainAccount = accountService.findMainAccount(member)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
         
         // 현재 활성 스케줄과 미래 스케줄 조회
@@ -178,7 +177,7 @@ public class MoneyBoxServiceImpl implements MoneyBoxService {
      */
     private void validateAccountPassword(Member member, String password) {
         // 주계좌 조회 (자동이체는 주계좌에서 출금)
-        Account mainAccount = accountRepository.findByMemberAndAccountTypeAndDeletedFalse(member, AccountType.MAIN)
+        Account mainAccount = accountService.findMainAccount(member)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
         
         // AccountService를 통한 비밀번호 검증

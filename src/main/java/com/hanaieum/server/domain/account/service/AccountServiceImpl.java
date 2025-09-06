@@ -7,9 +7,9 @@ import com.hanaieum.server.domain.account.entity.Account;
 import com.hanaieum.server.domain.account.entity.AccountType;
 import com.hanaieum.server.domain.account.repository.AccountRepository;
 import com.hanaieum.server.domain.autoTransfer.service.AutoTransferScheduleService;
+import com.hanaieum.server.domain.bucketList.entity.BucketList;
 import com.hanaieum.server.domain.member.entity.Member;
 import com.hanaieum.server.domain.member.repository.MemberRepository;
-import com.hanaieum.server.domain.bucketList.entity.BucketList;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,11 +20,12 @@ import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional
+@Transactional(readOnly = true)
 public class AccountServiceImpl implements AccountService {
     
     private final AccountRepository accountRepository;
@@ -33,6 +34,7 @@ public class AccountServiceImpl implements AccountService {
     private final AutoTransferScheduleService autoTransferScheduleService;
     
     @Override
+    @Transactional
     public Long createAccount(Member member, String accountName, String bankName, AccountType accountType, BigDecimal balance, String password) {
         // 유니크한 계좌번호 생성
         String accountNumber = generateUniqueAccountNumber(accountType);
@@ -59,6 +61,7 @@ public class AccountServiceImpl implements AccountService {
     }
     
     @Override
+    @Transactional
     public Long createMainAccount(Member member) {
         String accountName;
         
@@ -82,6 +85,7 @@ public class AccountServiceImpl implements AccountService {
     }
     
     @Override
+    @Transactional
     public Account createMoneyBoxAccount(Member member, String boxName, String password) {
         // 머니박스 계좌 생성 - 잔액 0원
         String accountNumber = generateUniqueAccountNumber(AccountType.MONEY_BOX);
@@ -107,6 +111,7 @@ public class AccountServiceImpl implements AccountService {
     }
     
     @Override
+    @Transactional
     public Account createMoneyBoxForBucketList(BucketList bucketList, Member member, String boxName) {
         // boxName이 없으면 버킷리스트 제목 사용
         String finalBoxName = (boxName != null && !boxName.trim().isEmpty()) ? boxName : bucketList.getTitle();
@@ -124,6 +129,7 @@ public class AccountServiceImpl implements AccountService {
     }
     
     @Override
+    @Transactional
     public Account createMoneyBoxForBucketList(BucketList bucketList, Member member, String boxName, 
                                                Boolean enableAutoTransfer, BigDecimal monthlyAmount, Integer transferDay) {
         // boxName이 없으면 버킷리스트 제목 사용
@@ -139,7 +145,7 @@ public class AccountServiceImpl implements AccountService {
         if (Boolean.TRUE.equals(enableAutoTransfer) && monthlyAmount != null && transferDay != null) {
             try {
                 // 사용자의 주계좌 조회 (출금 계좌로 사용)
-                Account mainAccount = accountRepository.findByMemberAndAccountTypeAndDeletedFalse(member, AccountType.MAIN)
+                Account mainAccount = findMainAccount(member)
                         .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
                 
                 // AutoTransferScheduleService를 통한 스케줄 생성 (다음달부터 시작)
@@ -185,9 +191,8 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public MainAccountResponse getMainAccount(Member member) {
-        Account mainAccount = accountRepository.findByMemberAndAccountTypeAndDeletedFalse(member, AccountType.MAIN)
+        Account mainAccount = findMainAccount(member)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
 
         log.info("주계좌 조회 완료 - 회원 ID: {}, 계좌번호: {}", member.getId(), mainAccount.getNumber());
@@ -196,12 +201,11 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Long getMainAccountIdByMemberId(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
         
-        Account mainAccount = accountRepository.findByMemberAndAccountTypeAndDeletedFalse(member, AccountType.MAIN)
+        Account mainAccount = findMainAccount(member)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
 
         log.info("주계좌 ID 조회 완료 - 회원 ID: {}, 계좌 ID: {}", memberId, mainAccount.getId());
@@ -210,9 +214,8 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Account findMainAccountByMember(Member member) {
-        Account mainAccount = accountRepository.findByMemberAndAccountTypeAndDeletedFalse(member, AccountType.MAIN)
+        Account mainAccount = findMainAccount(member)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
 
         log.info("주계좌 조회 완료 - 회원 ID: {}, 계좌 ID: {}", member.getId(), mainAccount.getId());
@@ -221,20 +224,19 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Account findById(Long accountId) {
         return accountRepository.findByIdAndDeletedFalse(accountId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
     }
 
     @Override
+    @Transactional
     public Account findByIdWithLock(Long accountId) {
         return accountRepository.findByIdAndDeletedFalseWithLock(accountId)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
     }
 
     @Override
-    @Transactional(readOnly = true)
     public void validateAccountOwnership(Long accountId, Long memberId) {
         Account account = findById(accountId);
         if (!account.getMember().getId().equals(memberId)) {
@@ -243,7 +245,6 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public void validateAccountPassword(Long accountId, String password) {
         Account account = findById(accountId);
         if (!passwordEncoder.matches(password, account.getPassword())) {
@@ -252,15 +253,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public void validateSufficientBalance(Long accountId, BigDecimal amount) {
-        Account account = findById(accountId);
-        if (account.getBalance().compareTo(amount) < 0) {
-            throw new CustomException(ErrorCode.INSUFFICIENT_BALANCE);
-        }
-    }
-
-    @Override
+    @Transactional
     public void debitBalance(Long accountId, BigDecimal amount) {
         Account account = findByIdWithLock(accountId);
         BigDecimal newBalance = account.getBalance().subtract(amount);
@@ -273,6 +266,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    @Transactional
     public void creditBalance(Long accountId, BigDecimal amount) {
         Account account = findByIdWithLock(accountId);
         BigDecimal newBalance = account.getBalance().add(amount);
@@ -282,12 +276,8 @@ public class AccountServiceImpl implements AccountService {
     }
     
     @Override
-    @Transactional(readOnly = true)
     public long getMoneyBoxCountByMember(Member member) {
-        log.info("멤버의 머니박스 개수 조회: memberId = {}", member.getId());
-        
         long count = accountRepository.countByMemberAndAccountTypeAndDeletedFalse(member, AccountType.MONEY_BOX);
-        
         log.info("머니박스 개수 조회 완료: memberId = {}, count = {}", member.getId(), count);
         return count;
     }
@@ -295,10 +285,19 @@ public class AccountServiceImpl implements AccountService {
     @Override
     @Transactional
     public Account save(Account account) {
-        log.info("계좌 저장: accountId = {}", account.getId());
         Account savedAccount = accountRepository.save(account);
         log.info("계좌 저장 완료: accountId = {}", savedAccount.getId());
         return savedAccount;
+    }
+
+    @Override
+    public Optional<Account> findMainAccount(Member member) {
+        return accountRepository.findByMemberAndAccountTypeAndDeletedFalse(member, AccountType.MAIN);
+    }
+
+    @Override
+    public List<Account> findMoneyBoxes(Member member) {
+        return accountRepository.findAllByMemberAndAccountTypeAndDeletedFalse(member, AccountType.MONEY_BOX);
     }
 
 }
