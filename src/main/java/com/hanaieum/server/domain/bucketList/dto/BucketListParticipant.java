@@ -10,15 +10,15 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class BucketListParticipantDto {
+public class BucketListParticipant {
     
     private Long memberId; // 참여자 회원 ID
     private String memberName; // 참여자 이름
     private LocalDateTime joinedAt; // 참여일시
     private Boolean isActive; // 활성 여부
     
-    public static BucketListParticipantDto of(BucketParticipant participant) {
-        return BucketListParticipantDto.builder()
+    public static BucketListParticipant of(BucketParticipant participant) {
+        return BucketListParticipant.builder()
                 .memberId(participant.getMember().getId())
                 .memberName(participant.getMember().getName())
                 .joinedAt(participant.getJoinedAt())

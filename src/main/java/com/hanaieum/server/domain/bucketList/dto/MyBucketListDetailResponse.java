@@ -23,13 +23,13 @@ public class MyBucketListDetailResponse {
     private BucketListStatus bucketListStatus; // 상태
     private boolean canComplete; // 달성 버튼 활성화 여부
     private MoneyBoxInfo moneyBoxInfo; // 머니박스 정보
-    private List<BucketListParticipantDto> participants; // 참여자 목록 (같이 진행하는 경우)
+    private List<BucketListParticipant> participants; // 참여자 목록 (같이 진행하는 경우)
 
     public static MyBucketListDetailResponse of(BucketList bucketList) {
         // 참여자 목록 생성 (활성화된 참여자만)
-        List<BucketListParticipantDto> participants = bucketList.getParticipants().stream()
+        List<BucketListParticipant> participants = bucketList.getParticipants().stream()
                 .filter(participant -> participant.getActive())
-                .map(BucketListParticipantDto::of)
+                .map(BucketListParticipant::of)
                 .toList();
 
         // 머니박스 정보 생성 (모든 버킷리스트에 머니박스가 존재)

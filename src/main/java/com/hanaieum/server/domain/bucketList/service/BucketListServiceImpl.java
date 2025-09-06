@@ -7,7 +7,6 @@ import com.hanaieum.server.domain.account.service.AccountService;
 import com.hanaieum.server.domain.autoTransfer.service.AutoTransferScheduleService;
 import com.hanaieum.server.domain.bucketList.calculator.InterestCalculator;
 import com.hanaieum.server.domain.coupon.service.CouponService;
-import com.hanaieum.server.domain.transaction.entity.ReferenceType;
 import com.hanaieum.server.domain.transaction.entity.Transaction;
 import com.hanaieum.server.domain.transaction.entity.TransactionType;
 import com.hanaieum.server.domain.transaction.service.TransactionService;
@@ -24,16 +23,18 @@ import com.hanaieum.server.domain.member.repository.MemberRepository;
 import com.hanaieum.server.security.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.ArrayList;
+
+import static java.lang.Integer.*;
 
 @Slf4j
 @Service
@@ -50,6 +51,7 @@ public class BucketListServiceImpl implements BucketListService {
     private final TransactionService transactionService;
     private final AutoTransferScheduleService autoTransferScheduleService;
     private final CouponService couponService;
+
     private final InterestCalculator interestCalculator;
 
     /**
@@ -84,6 +86,24 @@ public class BucketListServiceImpl implements BucketListService {
         return bucketList;
     }
 
+    /**
+     * 현재 로그인한 사용자의 버킷리스트 조회
+     */
+    @NotNull
+    private BucketList getBucketList(Member member, Long bucketListId) {
+        Long memberId = member.getId();
+
+        // 삭제되지 않은 버킷리스트만 조회 (참여자 정보 포함)
+        BucketList bucketList = bucketListRepository.findByIdAndDeletedWithParticipants(bucketListId, false)
+                .orElseThrow(() -> new CustomException(ErrorCode.BUCKET_LIST_NOT_FOUND));
+
+        // 소유자 확인
+        if (!bucketList.getMember().getId().equals(memberId)) {
+            throw new CustomException(ErrorCode.BUCKET_LIST_ACCESS_DENIED);
+        }
+        return bucketList;
+    }
+
     @Override
     @Transactional
     public BucketListResponse createBucketList(BucketListRequest requestDto) {
@@ -92,7 +112,7 @@ public class BucketListServiceImpl implements BucketListService {
         Member member = getCurrentMember();
 
         // targetMonths를 현재 날짜에 더해서 targetDate 계산
-        int months = Integer.parseInt(requestDto.getTargetMonths());
+        int months = parseInt(requestDto.getTargetMonths());
         LocalDate targetDate = LocalDate.now().plusMonths(months);
 
         // 버킷리스트 엔티티 생성
@@ -134,7 +154,7 @@ public class BucketListServiceImpl implements BucketListService {
                         requestDto.getMonthlyAmount() != null &&
                         requestDto.getTransferDay() != null) {
 
-                    Integer transferDay = Integer.parseInt(requestDto.getTransferDay());
+                    Integer transferDay = parseInt(requestDto.getTransferDay());
                     accountService.createMoneyBoxForBucketList(
                             savedBucketList,
                             member,
@@ -219,17 +239,7 @@ public class BucketListServiceImpl implements BucketListService {
     public MyBucketListDetailResponse getBucketListDetail(Long bucketListId) {
         log.info("내 버킷리스트 상세조회 요청: {}", bucketListId);
 
-        Member member = getCurrentMember();
-        Long memberId = member.getId();
-
-        // 삭제되지 않은 버킷리스트만 조회 (참여자 정보 포함)
-        BucketList bucketList = bucketListRepository.findByIdAndDeletedWithParticipants(bucketListId, false)
-                .orElseThrow(() -> new CustomException(ErrorCode.BUCKET_LIST_NOT_FOUND));
-
-        // 소유자 확인 (본인의 버킷리스트만 조회 가능)
-        if (!bucketList.getMember().getId().equals(memberId)) {
-            throw new CustomException(ErrorCode.BUCKET_LIST_ACCESS_DENIED);
-        }
+        BucketList bucketList = getBucketList(getCurrentMember(), bucketListId);
 
         log.info("버킷리스트 상세조회 완료: ID = {}, 제목 = {}", bucketListId, bucketList.getTitle());
 
@@ -259,7 +269,7 @@ public class BucketListServiceImpl implements BucketListService {
 
         // 1. 그룹원의 모든 진행중인 버킷리스트 조회 (공개 여부 상관없이)
         List<BucketList> allBucketLists = bucketListRepository.findByGroupMemberIdAndInProgress(groupMemberId);
-        
+
         // 2. 본인이 참여자인 비공개 진행중인 버킷리스트 조회
         List<BucketList> participatedBucketLists = bucketListRepository.findByParticipantMemberId(currentMember.getId())
                 .stream()
@@ -268,10 +278,10 @@ public class BucketListServiceImpl implements BucketListService {
 
         // 3. 접근 가능한 버킷리스트 필터링 (공개된 것 + 참여자인 것)
         List<BucketList> accessibleBucketLists = new ArrayList<>();
-        
+
         for (BucketList bucketList : allBucketLists) {
             // 공개된 버킷리스트이거나 본인이 참여자인 경우
-            if (bucketList.isPublicFlag() || 
+            if (bucketList.isPublicFlag() ||
                 participatedBucketLists.stream().anyMatch(p -> p.getId().equals(bucketList.getId()))) {
                 accessibleBucketLists.add(bucketList);
             }
@@ -280,7 +290,7 @@ public class BucketListServiceImpl implements BucketListService {
         // 4. 생성일 기준으로 정렬
         accessibleBucketLists.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
 
-        log.info("그룹원의 진행중인 버킷리스트 목록 조회 완료: groupMemberId = {}, 총 {}개 (전체: {}, 접근가능: {})", 
+        log.info("그룹원의 진행중인 버킷리스트 목록 조회 완료: groupMemberId = {}, 총 {}개 (전체: {}, 접근가능: {})",
                 groupMemberId, accessibleBucketLists.size(), allBucketLists.size(), accessibleBucketLists.size());
 
         return accessibleBucketLists.stream()
@@ -311,7 +321,7 @@ public class BucketListServiceImpl implements BucketListService {
 
         // 1. 그룹원의 모든 완료된 버킷리스트 조회 (공개 여부 상관없이)
         List<BucketList> allBucketLists = bucketListRepository.findByGroupMemberIdAndCompleted(groupMemberId);
-        
+
         // 2. 본인이 참여자인 비공개 완료된 버킷리스트 조회
         List<BucketList> participatedBucketLists = bucketListRepository.findByParticipantMemberId(currentMember.getId())
                 .stream()
@@ -320,10 +330,10 @@ public class BucketListServiceImpl implements BucketListService {
 
         // 3. 접근 가능한 버킷리스트 필터링 (공개된 것 + 참여자인 것)
         List<BucketList> accessibleBucketLists = new ArrayList<>();
-        
+
         for (BucketList bucketList : allBucketLists) {
             // 공개된 버킷리스트이거나 본인이 참여자인 경우
-            if (bucketList.isPublicFlag() || 
+            if (bucketList.isPublicFlag() ||
                 participatedBucketLists.stream().anyMatch(p -> p.getId().equals(bucketList.getId()))) {
                 accessibleBucketLists.add(bucketList);
             }
@@ -332,7 +342,7 @@ public class BucketListServiceImpl implements BucketListService {
         // 4. 생성일 기준으로 정렬
         accessibleBucketLists.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
 
-        log.info("그룹원의 완료된 버킷리스트 목록 조회 완료: groupMemberId = {}, 총 {}개 (전체: {}, 접근가능: {})", 
+        log.info("그룹원의 완료된 버킷리스트 목록 조회 완료: groupMemberId = {}, 총 {}개 (전체: {}, 접근가능: {})",
                 groupMemberId, accessibleBucketLists.size(), allBucketLists.size(), accessibleBucketLists.size());
 
         return accessibleBucketLists.stream()
@@ -390,17 +400,7 @@ public class BucketListServiceImpl implements BucketListService {
     public BucketListResponse updateBucketList(Long bucketListId, BucketListUpdateRequest requestDto) {
         log.info("버킷리스트 수정 요청: {} - {}", bucketListId, requestDto.getTitle());
 
-        Member member = getCurrentMember();
-        Long memberId = member.getId();
-
-        // 삭제되지 않은 버킷리스트만 조회 (참여자 정보 포함)
-        BucketList bucketList = bucketListRepository.findByIdAndDeletedWithParticipants(bucketListId, false)
-                .orElseThrow(() -> new CustomException(ErrorCode.BUCKET_LIST_NOT_FOUND));
-
-        // 소유자 확인
-        if (!bucketList.getMember().getId().equals(memberId)) {
-            throw new CustomException(ErrorCode.BUCKET_LIST_ACCESS_DENIED);
-        }
+        BucketList bucketList = getBucketList(getCurrentMember(), bucketListId);
 
         // 제목 수정
         bucketList.setTitle(requestDto.getTitle());
@@ -440,6 +440,7 @@ public class BucketListServiceImpl implements BucketListService {
 
         return BucketListResponse.of(savedBucketList);
     }
+
 
     /**
      * 버킷리스트 참여자 업데이트

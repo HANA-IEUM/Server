@@ -28,13 +28,13 @@ public class BucketListResponse {
     private BucketListStatus status; // 상태
     private LocalDateTime createdAt; // 생성일시
 
-    private List<BucketListParticipantDto> participants; // 참여자 목록 (같이 진행하는 경우)
+    private List<BucketListParticipant> participants; // 참여자 목록 (같이 진행하는 경우)
 
     public static BucketListResponse of(BucketList bucketList) {
         // 참여자 목록 생성 (활성화된 참여자만)
-        List<BucketListParticipantDto> participants = bucketList.getParticipants().stream()
+        List<BucketListParticipant> participants = bucketList.getParticipants().stream()
                 .filter(participant -> participant.getActive())
-                .map(BucketListParticipantDto::of)
+                .map(BucketListParticipant::of)
                 .toList();
 
         return BucketListResponse.builder()

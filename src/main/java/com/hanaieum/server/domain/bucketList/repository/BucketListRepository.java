@@ -14,8 +14,6 @@ import java.util.Optional;
 
 @Repository
 public interface BucketListRepository extends JpaRepository<BucketList, Long> {
-    List<BucketList> findByMemberAndDeletedOrderByCreatedAtDesc(Member member, boolean deleted);
-
     // 상태별 버킷리스트 조회
     List<BucketList> findByMemberAndStatusAndDeletedOrderByCreatedAtDesc(Member member, BucketListStatus status, boolean deleted);
 
