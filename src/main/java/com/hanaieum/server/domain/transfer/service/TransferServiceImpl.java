@@ -69,8 +69,20 @@ public class TransferServiceImpl implements TransferService {
     }
 
     @Override
-    public BigDecimal withdrawAllFromMoneyBox(Long memberId, Long moneyBoxAccountId, ReferenceType referenceType, Long referenceId) {
-        log.info("머니박스 전액 인출 시작 - 회원 ID: {}, 머니박스: {}, 참조: {}", memberId, moneyBoxAccountId, referenceType);
+    public void executeAutoTransfer(Long fromAccountId, Long toAccountId, BigDecimal amount, Long scheduleId) {
+        log.info("자동이체 실행 - 출금계좌: {}, 입금계좌: {}, 금액: {}, 스케줄ID: {}", 
+                fromAccountId, toAccountId, amount, scheduleId);
+
+        // 자동이체는 비밀번호 검증 없이 실행, scheduleId를 referenceId로 전달
+        executeTransfer(fromAccountId, toAccountId, amount, ReferenceType.AUTO_TRANSFER, scheduleId);
+
+        log.info("자동이체 실행 완료 - 출금계좌: {}, 입금계좌: {}, 금액: {}, 스케줄ID: {}", 
+                fromAccountId, toAccountId, amount, scheduleId);
+    }
+
+    @Override
+    public BigDecimal withdrawAllFromMoneyBox(Long memberId, Long moneyBoxAccountId, Long referenceId) {
+        log.info("머니박스 전액 인출 시작 - 회원 ID: {}, 머니박스: {}", memberId, moneyBoxAccountId);
 
         // 1. 회원의 주계좌 ID 조회
         Long mainAccountId = accountService.getMainAccountIdByMemberId(memberId);
@@ -81,7 +93,7 @@ public class TransferServiceImpl implements TransferService {
         
         // 3. 잔액이 0보다 클 때만 이체 실행
         if (balance.compareTo(BigDecimal.ZERO) > 0) {
-            executeTransfer(moneyBoxAccountId, mainAccountId, balance, referenceType, referenceId);
+            executeTransfer(moneyBoxAccountId, mainAccountId, balance, ReferenceType.MONEY_BOX_WITHDRAW, referenceId);
             log.info("머니박스 전액 인출 완료 - 회원 ID: {}, 머니박스: {} → 주계좌: {}, 인출금액: {}", 
                     memberId, moneyBoxAccountId, mainAccountId, balance);
             return balance;

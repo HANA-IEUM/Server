@@ -15,17 +15,20 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional
+@Transactional(readOnly = true)
 public class TransactionServiceImpl implements TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final AccountService accountService;
 
     @Override
+    @Transactional
     public void recordTransfer(Account fromAccount, Account toAccount, BigDecimal amount,
                                ReferenceType referenceType, String description, Long referenceId) {
 
@@ -64,6 +67,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    @Transactional
     public void recordDeposit(Account toAccount, BigDecimal amount, Long counterpartyAccountId,
                              String counterpartyName, ReferenceType referenceType, String description, Long referenceId) {
 
@@ -87,7 +91,6 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public Page<TransactionResponse> getTransactionsByAccountId(Long memberId, Long accountId, Pageable pageable) {
 
         // 계좌 소유권 검증
@@ -99,5 +102,11 @@ public class TransactionServiceImpl implements TransactionService {
                 memberId, accountId, pageable.getPageNumber(), pageable.getPageSize(), transactions.getTotalElements());
         
         return transactions.map(TransactionResponse::of);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Transaction> getTransactionsByTransactionType(Account account, TransactionType transactionType, LocalDate targetDate) {
+        return transactionRepository.findAllByAccountAndTransactionTypeAndCreatedAtBeforeOrderByCreatedAtAsc(account, transactionType, targetDate.atStartOfDay());
     }
 }

@@ -10,8 +10,8 @@ public interface MemberService {
     void hideGroupPrompt(Long memberId);
     
     MemberMypageResponse getMypageInfo(Long memberId);
-    
-    MemberMypageResponse updateMonthlyLivingCost(Long memberId, Integer monthlyLivingCost);
-    
+
     MonthlyLivingCostResponse getMonthlyLivingCost(Long memberId);
+
+    MemberMypageResponse updateMonthlyLivingCost(Long memberId, Integer monthlyLivingCost);
 }

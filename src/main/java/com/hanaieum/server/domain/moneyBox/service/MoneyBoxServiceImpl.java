@@ -25,7 +25,7 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional
+@Transactional(readOnly = true)
 public class MoneyBoxServiceImpl implements MoneyBoxService {
 
     private final AccountRepository accountRepository;
@@ -33,6 +33,7 @@ public class MoneyBoxServiceImpl implements MoneyBoxService {
     private final AccountService accountService;
 
     @Override
+    @Transactional
     public MoneyBoxUpdateResponse updateMoneyBox(Member member, Long accountId, MoneyBoxUpdateRequest request) {
         
         // 계좌 조회 및 검증
@@ -67,7 +68,6 @@ public class MoneyBoxServiceImpl implements MoneyBoxService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<MoneyBoxResponse> getMyMoneyBoxList(Member member) {
         // 사용자의 모든 MONEY_BOX 타입 계좌 조회
         List<Account> moneyBoxAccounts = accountRepository.findAllByMemberAndAccountTypeAndDeletedFalse(
@@ -87,7 +87,6 @@ public class MoneyBoxServiceImpl implements MoneyBoxService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public MoneyBoxInfoResponse getMoneyBoxInfo(Member member, Long boxId) {
         // 머니박스 계좌 조회 및 검증
         Account account = accountRepository.findByIdAndDeletedFalse(boxId)
@@ -119,7 +118,6 @@ public class MoneyBoxServiceImpl implements MoneyBoxService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public MoneyBoxUpdateResponse getMoneyBoxForEdit(Member member, Long boxId) {
         // 머니박스 계좌 조회 및 검증
         Account account = accountRepository.findByIdAndDeletedFalse(boxId)

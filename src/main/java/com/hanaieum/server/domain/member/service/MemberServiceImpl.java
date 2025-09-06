@@ -14,12 +14,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@Transactional
+@Transactional(readOnly = true)
 public class MemberServiceImpl implements MemberService {
 
     private final MemberRepository memberRepository;
 
     @Override
+    @Transactional
     public void confirmMainAccountLink(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
@@ -31,6 +32,7 @@ public class MemberServiceImpl implements MemberService {
     }
 
     @Override
+    @Transactional
     public void hideGroupPrompt(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
@@ -42,7 +44,6 @@ public class MemberServiceImpl implements MemberService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public MemberMypageResponse getMypageInfo(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
@@ -52,6 +53,16 @@ public class MemberServiceImpl implements MemberService {
     }
 
     @Override
+    public MonthlyLivingCostResponse getMonthlyLivingCost(Long memberId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
+
+        log.info("월 생활비 조회 - 회원 ID: {}", memberId);
+        return MonthlyLivingCostResponse.of(member);
+    }
+
+    @Override
+    @Transactional
     public MemberMypageResponse updateMonthlyLivingCost(Long memberId, Integer monthlyLivingCost) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
@@ -63,13 +74,4 @@ public class MemberServiceImpl implements MemberService {
         return MemberMypageResponse.of(member);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public MonthlyLivingCostResponse getMonthlyLivingCost(Long memberId) {
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new CustomException(ErrorCode.MEMBER_NOT_FOUND));
-
-        log.info("월 생활비 조회 - 회원 ID: {}", memberId);
-        return MonthlyLivingCostResponse.of(member);
-    }
 }
