@@ -29,7 +29,7 @@ public interface AccountService {
     // === 계좌 조회 메서드 ===
     MainAccountResponse getMainAccount(Member member);
     Long getMainAccountIdByMemberId(Long memberId);
-    Account findMainAccountByMember(Member member); // 추가: Member 객체로 주계좌 조회
+    Account findMainAccountByMember(Member member);
     Account findById(Long accountId);
     Account findByIdWithLock(Long accountId);
     
