@@ -75,11 +75,11 @@ class BucketListServiceTest {
     Stream<DynamicTest> dynamicTestsForGroupCompletedBucketLists() {
         return Stream.of(
                 DynamicTest.dynamicTest("공개 완료 리스트는 항상 접근 가능하다",
-                        () -> testPublicCompletedBucketListAccess()),
+                        this::testPublicCompletedBucketListAccess),
                 DynamicTest.dynamicTest("비공개 완료 리스트라도 참여자면 접근 가능하다",
-                        () -> testPrivateCompletedBucketListAsParticipant()),
+                        this::testPrivateCompletedBucketListAsParticipant),
                 DynamicTest.dynamicTest("비공개 완료 리스트에 참여하지 않았으면 접근 불가능하다",
-                        () -> testPrivateCompletedBucketListAsNonParticipant())
+                        this::testPrivateCompletedBucketListAsNonParticipant)
         );
     }
 
@@ -105,9 +105,9 @@ class BucketListServiceTest {
     Stream<DynamicTest> dynamicTestsForInProgressBucketLists() {
         return Stream.of(
                 DynamicTest.dynamicTest("진행중인 버킷리스트만 반환된다",
-                        () -> testInProgressBucketListsFiltering()),
+                        this::testInProgressBucketListsFiltering),
                 DynamicTest.dynamicTest("삭제된 버킷리스트는 제외된다",
-                        () -> testDeletedBucketListsExclusion())
+                        this::testDeletedBucketListsExclusion)
         );
     }
 
@@ -118,11 +118,11 @@ class BucketListServiceTest {
     Stream<DynamicTest> dynamicTestsForBucketListCompletion() {
         return Stream.of(
                 DynamicTest.dynamicTest("목표 날짜 도달 후 정상적으로 완료 처리된다",
-                        () -> testSuccessfulBucketListCompletion()),
+                        this::testSuccessfulBucketListCompletion),
                 DynamicTest.dynamicTest("목표 날짜 이전 완료 시도 시 실패한다",
-                        () -> testEarlyCompletionFailure()),
+                        this::testEarlyCompletionFailure),
                 DynamicTest.dynamicTest("이미 완료된 버킷리스트 재완료 시 실패한다",
-                        () -> testAlreadyCompletedFailure())
+                        this::testAlreadyCompletedFailure)
         );
     }
 
@@ -133,11 +133,11 @@ class BucketListServiceTest {
     Stream<DynamicTest> dynamicTestsForBucketListDeletion() {
         return Stream.of(
                 DynamicTest.dynamicTest("진행중인 버킷리스트 삭제 시 머니박스 잔액을 인출한다",
-                        () -> testInProgressBucketListDeletion()),
+                        this::testInProgressBucketListDeletion),
                 DynamicTest.dynamicTest("완료된 버킷리스트 삭제 시 정상적으로 삭제된다",
-                        () -> testCompletedBucketListDeletion()),
+                        this::testCompletedBucketListDeletion),
                 DynamicTest.dynamicTest("권한 없는 사용자의 삭제 시도 시 실패한다",
-                        () -> testUnauthorizedDeletionFailure())
+                        this::testUnauthorizedDeletionFailure)
         );
     }
 
@@ -148,13 +148,13 @@ class BucketListServiceTest {
     Stream<DynamicTest> dynamicTestsForBucketListUpdate() {
         return Stream.of(
                 DynamicTest.dynamicTest("기본 정보 수정이 정상적으로 처리된다",
-                        () -> testBasicInfoUpdate()),
+                        this::testBasicInfoUpdate),
                 DynamicTest.dynamicTest("혼자 진행에서 같이 진행으로 변경 시 참여자가 추가된다",
-                        () -> testShareModeChangeToShared()),
+                        this::testShareModeChangeToShared),
                 DynamicTest.dynamicTest("같이 진행에서 혼자 진행으로 변경 시 참여자가 제거된다",
-                        () -> testShareModeChangeToPrivate()),
+                        this::testShareModeChangeToPrivate),
                 DynamicTest.dynamicTest("권한 없는 사용자의 수정 시도 시 실패한다",
-                        () -> testUnauthorizedUpdateFailure())
+                        this::testUnauthorizedUpdateFailure)
         );
     }
 
