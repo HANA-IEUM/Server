@@ -521,21 +521,16 @@ class BucketListServiceTest {
                     bucketListId, member, TRIP, "여행 버킷리스트",
                     IN_PROGRESS, true, false
             );
-            // 실제 서비스 코드에서 moneyBoxAccount가 null일 때 처리 로직이 없으므로
-            // 머니박스가 있는 경우로 테스트 (현재 서비스 코드의 한계)
-            // TODO: 실제 서비스 코드에서 moneyBoxAccount null 체크 추가 필요
-
             setupSecurityContext(securityContextHolderMock, memberId);
             given(memberRepository.findById(memberId)).willReturn(Optional.of(member));
             given(bucketListRepository.findByIdAndDeletedWithParticipants(bucketListId, false))
                     .willReturn(Optional.of(bucketList));
-            // save 메서드는 NullPointerException이 먼저 발생하므로 호출되지 않음
+
             lenient().when(bucketListRepository.save(any(BucketList.class))).thenReturn(bucketList);
 
             BucketListServiceImpl service = createBucketListService();
 
             // when & Then
-            // 현재 서비스 코드에 버그가 있어서 NullPointerException이 발생할 것으로 예상
             assertThatThrownBy(() -> service.deleteBucketList(bucketListId))
                     .isInstanceOf(NullPointerException.class);
         }
