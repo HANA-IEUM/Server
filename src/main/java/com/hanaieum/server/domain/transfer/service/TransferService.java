@@ -11,7 +11,7 @@ public interface TransferService {
 
     void executeAutoTransfer(Long fromAccountId, Long toAccountId, BigDecimal amount, Long scheduleId);
 
-    BigDecimal withdrawAllFromMoneyBox(Long memberId, Long moneyBoxAccountId, ReferenceType referenceType, Long referenceId);
+    BigDecimal withdrawAllFromMoneyBox(Long memberId, Long moneyBoxAccountId, Long referenceId);
 
     void payInterest(Long memberId, BigDecimal interestAmount, Long bucketListId);
 }

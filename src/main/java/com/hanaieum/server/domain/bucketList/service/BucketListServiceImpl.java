@@ -538,7 +538,6 @@ public class BucketListServiceImpl implements BucketListService {
                 BigDecimal withdrawnAmount = transferService.withdrawAllFromMoneyBox(
                         member.getId(),
                         moneyBoxAccount.getId(),
-                        ReferenceType.MONEY_BOX_WITHDRAW,
                         bucketListId
                 );
                 
@@ -620,7 +619,6 @@ public class BucketListServiceImpl implements BucketListService {
             BigDecimal withdrawnAmount = transferService.withdrawAllFromMoneyBox(
                     member.getId(),
                     moneyBoxAccount.getId(),
-                    ReferenceType.MONEY_BOX_WITHDRAW,
                     bucketListId
             );
             log.info("목표 달성 원금 인출 완료: 머니박스 {} → 주계좌, 인출금액: {}", 
