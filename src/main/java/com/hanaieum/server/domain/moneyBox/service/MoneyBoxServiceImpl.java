@@ -6,7 +6,7 @@ import com.hanaieum.server.domain.account.entity.Account;
 import com.hanaieum.server.domain.account.entity.AccountType;
 import com.hanaieum.server.domain.account.repository.AccountRepository;
 import com.hanaieum.server.domain.account.service.AccountService;
-import com.hanaieum.server.domain.autoTransfer.entity.AutoTransferSchedule;
+import com.hanaieum.server.domain.autoTransfer.dto.TransferStatus;
 import com.hanaieum.server.domain.autoTransfer.service.AutoTransferScheduleService;
 import com.hanaieum.server.domain.member.entity.Member;
 import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxInfoResponse;
@@ -19,7 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -98,15 +97,13 @@ public class MoneyBoxServiceImpl implements MoneyBoxService {
         Account mainAccount = accountService.findMainAccount(member)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
         
-        Optional<AutoTransferSchedule> currentSchedule = autoTransferScheduleService
-                .getCurrentSchedule(mainAccount, account);
-        Optional<AutoTransferSchedule> futureSchedule = autoTransferScheduleService
-                .getFutureSchedule(mainAccount, account);
+        TransferStatus transferStatus = autoTransferScheduleService
+                .getTransferStatus(mainAccount, account);
         
-        log.info("머니박스 요약 조회 완료: boxId={}, hasCurrentSchedule={}, hasFutureSchedule={}", 
-                boxId, currentSchedule.isPresent(), futureSchedule.isPresent());
+        log.info("머니박스 요약 조회 완료: boxId={}, currentEnabled={}, nextEnabled={}", 
+                boxId, transferStatus.isCurrentlyEnabled(), transferStatus.isNextMonthEnabled());
         
-        return MoneyBoxInfoResponse.of(account, currentSchedule.orElse(null), futureSchedule.orElse(null));
+        return MoneyBoxInfoResponse.of(account, transferStatus);
     }
 
     @Override
@@ -157,10 +154,9 @@ public class MoneyBoxServiceImpl implements MoneyBoxService {
                 .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
         
         // 현재 활성 스케줄과 미래 스케줄 조회
-        Optional<AutoTransferSchedule> currentSchedule = autoTransferScheduleService.getCurrentSchedule(mainAccount, account);
-        Optional<AutoTransferSchedule> futureSchedule = autoTransferScheduleService.getFutureSchedule(mainAccount, account);
+        TransferStatus transferStatus = autoTransferScheduleService.getTransferStatus(mainAccount, account);
         
-        return MoneyBoxUpdateResponse.of(account, currentSchedule, futureSchedule);
+        return MoneyBoxUpdateResponse.of(account, transferStatus);
     }
     
     /**

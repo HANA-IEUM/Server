@@ -1,6 +1,7 @@
 package com.hanaieum.server.domain.autoTransfer.service;
 
 import com.hanaieum.server.domain.account.entity.Account;
+import com.hanaieum.server.domain.autoTransfer.dto.TransferStatus;
 import com.hanaieum.server.domain.autoTransfer.entity.AutoTransferSchedule;
 
 import java.math.BigDecimal;
@@ -48,4 +49,11 @@ public interface AutoTransferScheduleService {
      * - 머니박스가 toAccount인 모든 스케줄을 대상으로 함
      */
     void deleteAllSchedulesForMoneyBox(Account moneyBoxAccount);
+    
+    /**
+     * 자동이체 현재/다음달 상태 조회 (MoneyBoxInfoResponse, MoneyBoxUpdateResponse 공통 사용)
+     * - 현재 유효한 스케줄과 미래 스케줄을 조회하여 통합된 상태 정보 반환
+     * - validTo 검증을 통해 다음달 실제 적용 여부 계산
+     */
+    TransferStatus getTransferStatus(Account fromAccount, Account toAccount);
 }

@@ -1,6 +1,7 @@
 package com.hanaieum.server.domain.autoTransfer.service;
 
 import com.hanaieum.server.domain.account.entity.Account;
+import com.hanaieum.server.domain.autoTransfer.dto.TransferStatus;
 import com.hanaieum.server.domain.autoTransfer.entity.AutoTransferSchedule;
 import com.hanaieum.server.domain.autoTransfer.repository.AutoTransferScheduleRepository;
 import lombok.RequiredArgsConstructor;
@@ -177,5 +178,66 @@ public class AutoTransferScheduleServiceImpl implements AutoTransferScheduleServ
         
         log.info("머니박스 삭제에 따른 모든 자동이체 스케줄 삭제 완료: moneyBoxAccountId={}, 삭제된 스케줄 수={}", 
                 moneyBoxAccount.getId(), allSchedules.size());
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public TransferStatus getTransferStatus(Account fromAccount, Account toAccount) {
+        // 현재 유효한 스케줄과 미래 스케줄 조회
+        Optional<AutoTransferSchedule> currentSchedule = getCurrentSchedule(fromAccount, toAccount);
+        Optional<AutoTransferSchedule> futureSchedule = getFutureSchedule(fromAccount, toAccount);
+        
+        // 다음달에 실제로 적용될 자동이체 정보 계산
+        LocalDate nextMonth = LocalDate.now().withDayOfMonth(1).plusMonths(1);
+        
+        // 현재 상태
+        Boolean currentEnabled = currentSchedule.isPresent();
+        BigDecimal currentAmount = currentSchedule.map(AutoTransferSchedule::getAmount).orElse(null);
+        Integer currentTransferDay = currentSchedule.map(AutoTransferSchedule::getTransferDay).orElse(null);
+        
+        // 다음달 상태 계산
+        Boolean nextEnabled;
+        BigDecimal nextAmount;
+        Integer nextTransferDay;
+        
+        if (futureSchedule.isPresent()) {
+            // 미래 스케줄이 있으면 해당 스케줄이 다음달에 적용됨
+            AutoTransferSchedule future = futureSchedule.get();
+            nextEnabled = true;
+            nextAmount = future.getAmount();
+            nextTransferDay = future.getTransferDay();
+        } else if (currentSchedule.isPresent()) {
+            // 현재 스케줄이 있는 경우
+            AutoTransferSchedule current = currentSchedule.get();
+
+            // 현재 스케줄이 다음달에도 유효한지 확인
+            boolean currentScheduleValidNextMonth = current.getValidTo() == null || 
+                    !current.getValidTo().isBefore(nextMonth);
+            
+            if (currentScheduleValidNextMonth) {
+                // 현재 스케줄이 다음달에도 계속 적용됨
+                nextEnabled = true;
+                nextAmount = current.getAmount();
+                nextTransferDay = current.getTransferDay();
+            } else {
+                // 현재 스케줄이 이번달로 종료됨 -> 다음달은 비활성화
+                nextEnabled = false;
+                nextAmount = null;
+                nextTransferDay = null;
+            }
+        } else {
+            // 현재도 미래도 스케줄이 없으면 다음달에도 비활성화
+            nextEnabled = false;
+            nextAmount = null;
+            nextTransferDay = null;
+        }
+        
+        log.debug("자동이체 상태 조회 완료: fromAccountId={}, toAccountId={}, currentEnabled={}, nextEnabled={}", 
+                fromAccount.getId(), toAccount.getId(), currentEnabled, nextEnabled);
+        
+        return TransferStatus.of(
+            currentEnabled, currentAmount, currentTransferDay,
+            nextEnabled, nextAmount, nextTransferDay
+        );
     }
 }
