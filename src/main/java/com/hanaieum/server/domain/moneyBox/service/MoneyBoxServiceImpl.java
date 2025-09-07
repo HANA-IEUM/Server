@@ -1,24 +1,23 @@
 package com.hanaieum.server.domain.moneyBox.service;
 
-import com.hanaieum.server.common.exception.ErrorCode;
 import com.hanaieum.server.common.exception.CustomException;
+import com.hanaieum.server.common.exception.ErrorCode;
 import com.hanaieum.server.domain.account.entity.Account;
 import com.hanaieum.server.domain.account.entity.AccountType;
 import com.hanaieum.server.domain.account.repository.AccountRepository;
-import com.hanaieum.server.domain.member.entity.Member;
+import com.hanaieum.server.domain.account.service.AccountService;
 import com.hanaieum.server.domain.autoTransfer.entity.AutoTransferSchedule;
 import com.hanaieum.server.domain.autoTransfer.service.AutoTransferScheduleService;
+import com.hanaieum.server.domain.member.entity.Member;
+import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxInfoResponse;
+import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxResponse;
 import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxUpdateRequest;
 import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxUpdateResponse;
-import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxResponse;
-import com.hanaieum.server.domain.moneyBox.dto.MoneyBoxInfoResponse;
-import com.hanaieum.server.domain.account.service.AccountService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -72,15 +71,9 @@ public class MoneyBoxServiceImpl implements MoneyBoxService {
         // 사용자의 모든 MONEY_BOX 타입 계좌 조회
         List<Account> moneyBoxAccounts = accountService.findMoneyBoxes(member);
         
-        // 삭제된 버킷리스트와 연결된 머니박스는 제외
-        List<Account> activeMoneyBoxAccounts = moneyBoxAccounts.stream()
-                .filter(account -> account.getBucketList() == null || !account.getBucketList().isDeleted())
-                .toList();
+        log.info("머니박스 목록 조회 완료: memberId={}, count={}", member.getId(), moneyBoxAccounts.size());
         
-        log.info("머니박스 목록 조회 완료: memberId={}, totalCount={}, activeCount={}", 
-                member.getId(), moneyBoxAccounts.size(), activeMoneyBoxAccounts.size());
-        
-        return activeMoneyBoxAccounts.stream()
+        return moneyBoxAccounts.stream()
                 .map(MoneyBoxResponse::of)
                 .toList();
     }
@@ -159,8 +152,6 @@ public class MoneyBoxServiceImpl implements MoneyBoxService {
      * UpdateResponse 생성
      */
     private MoneyBoxUpdateResponse createUpdateResponse(Account account, Member member) {
-        LocalDate today = LocalDate.now();
-        
         // 주계좌 조회
         Account mainAccount = accountService.findMainAccount(member)
                 .orElseThrow(() -> new CustomException(ErrorCode.ACCOUNT_NOT_FOUND));
