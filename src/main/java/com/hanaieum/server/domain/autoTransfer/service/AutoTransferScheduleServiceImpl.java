@@ -92,18 +92,6 @@ public class AutoTransferScheduleServiceImpl implements AutoTransferScheduleServ
         return autoTransferScheduleRepository.findFutureSchedules(fromAccount, toAccount, today);
     }
     
-    @Override
-    @Transactional(readOnly = true)
-    public Optional<AutoTransferSchedule> getScheduleAt(Account fromAccount, Account toAccount, LocalDate date) {
-        return autoTransferScheduleRepository.findActiveSchedule(fromAccount, toAccount, date);
-    }
-    
-    @Override
-    @Transactional(readOnly = true)
-    public boolean hasActiveSchedule(Account fromAccount, Account toAccount) {
-        return getCurrentSchedule(fromAccount, toAccount).isPresent();
-    }
-    
     /**
      * 자동이체 활성화 (내부 메서드)
      */

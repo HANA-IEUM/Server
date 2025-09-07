@@ -41,16 +41,6 @@ public interface AutoTransferScheduleService {
      * 미래 스케줄들 조회
      */
     List<AutoTransferSchedule> getFutureSchedules(Account fromAccount, Account toAccount);
-
-    /**
-     * 특정 날짜에 유효한 스케줄 조회
-     */
-    Optional<AutoTransferSchedule> getScheduleAt(Account fromAccount, Account toAccount, LocalDate date);
-    
-    /**
-     * 스케줄 존재 여부 확인
-     */
-    boolean hasActiveSchedule(Account fromAccount, Account toAccount);
     
     /**
      * 머니박스 삭제 시 관련된 모든 자동이체 스케줄 삭제
