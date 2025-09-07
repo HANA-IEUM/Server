@@ -38,9 +38,9 @@ public interface AutoTransferScheduleService {
     Optional<AutoTransferSchedule> getCurrentSchedule(Account fromAccount, Account toAccount);
 
     /**
-     * 미래 스케줄들 조회
+     * 미래 스케줄 조회 (최대 1개)
      */
-    List<AutoTransferSchedule> getFutureSchedules(Account fromAccount, Account toAccount);
+    Optional<AutoTransferSchedule> getFutureSchedule(Account fromAccount, Account toAccount);
     
     /**
      * 머니박스 삭제 시 관련된 모든 자동이체 스케줄 삭제

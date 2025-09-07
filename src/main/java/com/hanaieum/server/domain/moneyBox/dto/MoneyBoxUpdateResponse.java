@@ -6,7 +6,6 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Optional;
 
 @Getter
@@ -31,7 +30,7 @@ public class MoneyBoxUpdateResponse {
     
     public static MoneyBoxUpdateResponse of(Account account, 
                                           Optional<AutoTransferSchedule> currentSchedule,
-                                          List<AutoTransferSchedule> futureSchedules) {
+                                          Optional<AutoTransferSchedule> futureSchedule) {
         
         // 다음달에 실제로 적용될 자동이체 정보 계산
         LocalDate nextMonth = LocalDate.now().withDayOfMonth(1).plusMonths(1);
@@ -39,9 +38,9 @@ public class MoneyBoxUpdateResponse {
         BigDecimal nextMonthlyAmount = null;
         Integer nextTransferDay = null;
         
-        if (!futureSchedules.isEmpty()) {
+        if (futureSchedule.isPresent()) {
             // 미래 스케줄이 있으면 해당 스케줄이 다음달에 적용됨
-            AutoTransferSchedule nextSchedule = futureSchedules.get(0);
+            AutoTransferSchedule nextSchedule = futureSchedule.get();
             nextAutoTransferEnabled = true;
             nextMonthlyAmount = nextSchedule.getAmount();
             nextTransferDay = nextSchedule.getTransferDay();

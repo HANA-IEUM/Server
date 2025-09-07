@@ -100,13 +100,13 @@ public class MoneyBoxServiceImpl implements MoneyBoxService {
         
         Optional<AutoTransferSchedule> currentSchedule = autoTransferScheduleService
                 .getCurrentSchedule(mainAccount, account);
-        List<AutoTransferSchedule> futureSchedules = autoTransferScheduleService
-                .getFutureSchedules(mainAccount, account);
+        Optional<AutoTransferSchedule> futureSchedule = autoTransferScheduleService
+                .getFutureSchedule(mainAccount, account);
         
         log.info("머니박스 요약 조회 완료: boxId={}, hasCurrentSchedule={}, hasFutureSchedule={}", 
-                boxId, currentSchedule.isPresent(), !futureSchedules.isEmpty());
+                boxId, currentSchedule.isPresent(), futureSchedule.isPresent());
         
-        return MoneyBoxInfoResponse.of(account, currentSchedule.orElse(null), futureSchedules);
+        return MoneyBoxInfoResponse.of(account, currentSchedule.orElse(null), futureSchedule.orElse(null));
     }
 
     @Override
@@ -158,9 +158,9 @@ public class MoneyBoxServiceImpl implements MoneyBoxService {
         
         // 현재 활성 스케줄과 미래 스케줄 조회
         Optional<AutoTransferSchedule> currentSchedule = autoTransferScheduleService.getCurrentSchedule(mainAccount, account);
-        List<AutoTransferSchedule> futureSchedules = autoTransferScheduleService.getFutureSchedules(mainAccount, account);
+        Optional<AutoTransferSchedule> futureSchedule = autoTransferScheduleService.getFutureSchedule(mainAccount, account);
         
-        return MoneyBoxUpdateResponse.of(account, currentSchedule, futureSchedules);
+        return MoneyBoxUpdateResponse.of(account, currentSchedule, futureSchedule);
     }
     
     /**

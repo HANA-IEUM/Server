@@ -6,7 +6,6 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
 
 @Getter
 @Setter
@@ -26,17 +25,16 @@ public class MoneyBoxInfoResponse {
     private Long bucketId; // 연관된 버킷리스트 ID
     private String bucketTitle; // 버킷리스트 title
     
-    public static MoneyBoxInfoResponse of(Account account, AutoTransferSchedule currentSchedule, List<AutoTransferSchedule> futureSchedules) {
+    public static MoneyBoxInfoResponse of(Account account, AutoTransferSchedule currentSchedule, AutoTransferSchedule futureSchedule) {
         // 다음달에 실제로 이체될 정보 계산 (validTo 고려)
         LocalDate nextMonth = LocalDate.now().withDayOfMonth(1).plusMonths(1);
         Integer nextTransferDay = null;
         BigDecimal nextTransferAmount = null;
         
-        if (!futureSchedules.isEmpty()) {
+        if (futureSchedule != null) {
             // 미래 스케줄이 있으면 해당 스케줄이 다음달에 적용됨
-            AutoTransferSchedule nextSchedule = futureSchedules.get(0);
-            nextTransferDay = nextSchedule.getTransferDay();
-            nextTransferAmount = nextSchedule.getAmount();
+            nextTransferDay = futureSchedule.getTransferDay();
+            nextTransferAmount = futureSchedule.getAmount();
         } else if (currentSchedule != null) {
             // 현재 스케줄이 다음달에도 유효한지 확인
             boolean currentScheduleValidNextMonth = currentSchedule.getValidTo() == null || 

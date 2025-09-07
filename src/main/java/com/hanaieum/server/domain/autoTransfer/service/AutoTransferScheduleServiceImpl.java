@@ -69,9 +69,10 @@ public class AutoTransferScheduleServiceImpl implements AutoTransferScheduleServ
                     currentSchedule.get().getId(), endOfMonth);
         }
         
-        // 미래 스케줄들 삭제
-        List<AutoTransferSchedule> futureSchedules = getFutureSchedules(fromAccount, toAccount);
-        for (AutoTransferSchedule schedule : futureSchedules) {
+        // 미래 스케줄 삭제
+        Optional<AutoTransferSchedule> futureSchedule = getFutureSchedule(fromAccount, toAccount);
+        if (futureSchedule.isPresent()) {
+            AutoTransferSchedule schedule = futureSchedule.get();
             schedule.setDeleted(true);
             autoTransferScheduleRepository.save(schedule);
             log.info("미래 스케줄 삭제: scheduleId={}", schedule.getId());
@@ -87,9 +88,9 @@ public class AutoTransferScheduleServiceImpl implements AutoTransferScheduleServ
     
     @Override
     @Transactional(readOnly = true)
-    public List<AutoTransferSchedule> getFutureSchedules(Account fromAccount, Account toAccount) {
+    public Optional<AutoTransferSchedule> getFutureSchedule(Account fromAccount, Account toAccount) {
         LocalDate today = LocalDate.now();
-        return autoTransferScheduleRepository.findFutureSchedules(fromAccount, toAccount, today);
+        return autoTransferScheduleRepository.findFutureSchedule(fromAccount, toAccount, today);
     }
     
     /**
@@ -102,20 +103,20 @@ public class AutoTransferScheduleServiceImpl implements AutoTransferScheduleServ
         // 현재 유효한 스케줄 조회
         Optional<AutoTransferSchedule> currentSchedule = getCurrentSchedule(fromAccount, toAccount);
         
-        // 미래 스케줄들 조회
-        List<AutoTransferSchedule> futureSchedules = getFutureSchedules(fromAccount, toAccount);
+        // 미래 스케줄 조회 (최대 1개)
+        Optional<AutoTransferSchedule> futureSchedule = getFutureSchedule(fromAccount, toAccount);
         
         // 변경사항 체크
         boolean hasChanges = currentSchedule.isPresent() && 
             hasScheduleChanges(currentSchedule.get(), amount, transferDay);
         
         // 변경사항이 있거나 미래 스케줄이 없을 때만 처리
-        if (hasChanges || futureSchedules.isEmpty()) {
+        if (hasChanges || futureSchedule.isEmpty()) {
             
             // 미래 스케줄 생성/업데이트
-            if (!futureSchedules.isEmpty()) {
+            if (futureSchedule.isPresent()) {
                 // 기존 미래 스케줄 업데이트
-                AutoTransferSchedule schedule = futureSchedules.get(0);
+                AutoTransferSchedule schedule = futureSchedule.get();
                 schedule.setAmount(amount);
                 schedule.setTransferDay(transferDay);
                 autoTransferScheduleRepository.save(schedule);
