@@ -105,7 +105,6 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<Transaction> getTransactionsByTransactionType(Account account, TransactionType transactionType, LocalDate targetDate) {
         return transactionRepository.findAllByAccountAndTransactionTypeAndCreatedAtBeforeOrderByCreatedAtAsc(account, transactionType, targetDate.atStartOfDay());
     }
