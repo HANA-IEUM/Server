@@ -26,6 +26,7 @@ public interface AutoTransferScheduleRepository extends JpaRepository<AutoTransf
     
     /**
      * 특정 날짜 이후 시작되는 미래 스케줄 조회
+     * ats.validFrom > :date 다음달부터 해당하는 미래 스케줄
      */
     @Query("SELECT ats FROM AutoTransferSchedule ats WHERE " +
            "ats.fromAccount = :fromAccount AND ats.toAccount = :toAccount AND " +

@@ -94,10 +94,10 @@ public class AutoTransferScheduleServiceImpl implements AutoTransferScheduleServ
     
     /**
      * 자동이체 활성화 (내부 메서드)
+     * 성능 최적화: 변경사항이 있거나 미래 스케줄이 없을 때만 DB 작업 수행
      */
     private void enableSchedule(Account fromAccount, Account toAccount, BigDecimal amount, Integer transferDay) {
         LocalDate today = LocalDate.now();
-        LocalDate nextMonth = today.withDayOfMonth(1).plusMonths(1);
         
         // 현재 유효한 스케줄 조회
         Optional<AutoTransferSchedule> currentSchedule = getCurrentSchedule(fromAccount, toAccount);
@@ -105,26 +105,39 @@ public class AutoTransferScheduleServiceImpl implements AutoTransferScheduleServ
         // 미래 스케줄들 조회
         List<AutoTransferSchedule> futureSchedules = getFutureSchedules(fromAccount, toAccount);
         
-        if (!futureSchedules.isEmpty()) {
-            // 기존 미래 스케줄 업데이트 (중복 생성 방지)
-            AutoTransferSchedule schedule = futureSchedules.get(0);
-            schedule.setAmount(amount);
-            schedule.setTransferDay(transferDay);
-            autoTransferScheduleRepository.save(schedule);
-            log.info("기존 미래 스케줄 업데이트: scheduleId={}, amount={}, transferDay={}", 
-                    schedule.getId(), amount, transferDay);
-        } else {
-            // 새 스케줄 생성 (미래 스케줄이 없을 때만)
-            createSchedule(fromAccount, toAccount, amount, transferDay);
-        }
+        // 변경사항 체크
+        boolean hasChanges = currentSchedule.isPresent() && 
+            hasScheduleChanges(currentSchedule.get(), amount, transferDay);
         
-        // 현재 스케줄 종료 처리 (설정이 다르다면)
-        if (currentSchedule.isPresent() && hasScheduleChanges(currentSchedule.get(), amount, transferDay)) {
-            LocalDate endOfMonth = today.withDayOfMonth(today.lengthOfMonth());
-            currentSchedule.get().setValidTo(endOfMonth);
-            autoTransferScheduleRepository.save(currentSchedule.get());
-            log.info("현재 스케줄 종료 처리: scheduleId={}, validTo={}", 
-                    currentSchedule.get().getId(), endOfMonth);
+        // 변경사항이 있거나 미래 스케줄이 없을 때만 처리
+        if (hasChanges || futureSchedules.isEmpty()) {
+            
+            // 미래 스케줄 생성/업데이트
+            if (!futureSchedules.isEmpty()) {
+                // 기존 미래 스케줄 업데이트
+                AutoTransferSchedule schedule = futureSchedules.get(0);
+                schedule.setAmount(amount);
+                schedule.setTransferDay(transferDay);
+                autoTransferScheduleRepository.save(schedule);
+                log.info("기존 미래 스케줄 업데이트: scheduleId={}, amount={}, transferDay={}", 
+                        schedule.getId(), amount, transferDay);
+            } else {
+                // 새 스케줄 생성
+                createSchedule(fromAccount, toAccount, amount, transferDay);
+            }
+            
+            // 현재 스케줄 종료 처리 (미래 스케줄 생성)
+            if (currentSchedule.isPresent()) {
+                LocalDate endOfMonth = today.withDayOfMonth(today.lengthOfMonth());
+                currentSchedule.get().setValidTo(endOfMonth);
+                autoTransferScheduleRepository.save(currentSchedule.get());
+                log.info("현재 스케줄 종료 처리: scheduleId={}, validTo={}", 
+                        currentSchedule.get().getId(), endOfMonth);
+            }
+            
+        } else {
+            log.info("자동이체 설정 변경사항 없음 - DB 작업 생략: fromAccountId={}, toAccountId={}", 
+                    fromAccount.getId(), toAccount.getId());
         }
     }
     
