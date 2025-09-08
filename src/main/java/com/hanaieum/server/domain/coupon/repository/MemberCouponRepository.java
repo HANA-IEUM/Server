@@ -1,6 +1,5 @@
 package com.hanaieum.server.domain.coupon.repository;
 
-import com.hanaieum.server.domain.coupon.dto.CouponResponse;
 import com.hanaieum.server.domain.coupon.entity.MemberCoupon;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
