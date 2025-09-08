@@ -140,7 +140,6 @@ public class AutoTransferServiceImpl implements AutoTransferService {
     }
     
     @Override
-    @Transactional(readOnly = true)
     public List<AutoTransferSchedule> getSchedulesToExecute(LocalDate targetDate) {
         int targetDay = targetDate.getDayOfMonth();
         return scheduleRepository.findSchedulesForExecution(targetDate, targetDay);
