@@ -20,13 +20,13 @@ public class GroupBucketListDetailResponse {
     private LocalDate targetDate; // 목표기간 종료날짜
     private boolean togetherFlag; // 혼자/같이 여부
     private BucketListStatus bucketListStatus; // 상태
-    private List<BucketListParticipantDto> participants; // 참여자 목록 (같이 진행하는 경우)
+    private List<BucketListParticipant> participants; // 참여자 목록 (같이 진행하는 경우)
 
     public static GroupBucketListDetailResponse of(BucketList bucketList) {
         // 참여자 목록 생성 (활성화된 참여자만)
-        List<BucketListParticipantDto> participants = bucketList.getParticipants().stream()
+        List<BucketListParticipant> participants = bucketList.getParticipants().stream()
                 .filter(participant -> participant.getActive())
-                .map(BucketListParticipantDto::of)
+                .map(BucketListParticipant::of)
                 .toList();
 
         return GroupBucketListDetailResponse.builder()
