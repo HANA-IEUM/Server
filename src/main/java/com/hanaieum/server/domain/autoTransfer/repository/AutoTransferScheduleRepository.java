@@ -26,12 +26,14 @@ public interface AutoTransferScheduleRepository extends JpaRepository<AutoTransf
     
     /**
      * 특정 날짜 이후 시작되는 미래 스케줄 조회
+     * ats.validFrom > :date 다음달부터 해당하는 미래 스케줄
+     * 동시성이나 데이터 이상으로 겹칠 가능성 존재한다고 생각되는 경우,
+     * 추후 ORDER BY ats.validFrom ASC LIMIT 1과 같은 조건 추가
      */
     @Query("SELECT ats FROM AutoTransferSchedule ats WHERE " +
            "ats.fromAccount = :fromAccount AND ats.toAccount = :toAccount AND " +
-           "ats.validFrom > :date AND ats.active = true AND ats.deleted = false " +
-           "ORDER BY ats.validFrom ASC")
-    List<AutoTransferSchedule> findFutureSchedules(
+           "ats.validFrom > :date AND ats.active = true AND ats.deleted = false ")
+    Optional<AutoTransferSchedule> findFutureSchedule(
         @Param("fromAccount") Account fromAccount,
         @Param("toAccount") Account toAccount,
         @Param("date") LocalDate date);

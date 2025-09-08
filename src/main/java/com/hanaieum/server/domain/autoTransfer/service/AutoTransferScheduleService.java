@@ -1,6 +1,7 @@
 package com.hanaieum.server.domain.autoTransfer.service;
 
 import com.hanaieum.server.domain.account.entity.Account;
+import com.hanaieum.server.domain.autoTransfer.dto.TransferStatus;
 import com.hanaieum.server.domain.autoTransfer.entity.AutoTransferSchedule;
 
 import java.math.BigDecimal;
@@ -38,19 +39,9 @@ public interface AutoTransferScheduleService {
     Optional<AutoTransferSchedule> getCurrentSchedule(Account fromAccount, Account toAccount);
 
     /**
-     * 미래 스케줄들 조회
+     * 미래 스케줄 조회 (최대 1개)
      */
-    List<AutoTransferSchedule> getFutureSchedules(Account fromAccount, Account toAccount);
-
-    /**
-     * 특정 날짜에 유효한 스케줄 조회
-     */
-    Optional<AutoTransferSchedule> getScheduleAt(Account fromAccount, Account toAccount, LocalDate date);
-    
-    /**
-     * 스케줄 존재 여부 확인
-     */
-    boolean hasActiveSchedule(Account fromAccount, Account toAccount);
+    Optional<AutoTransferSchedule> getFutureSchedule(Account fromAccount, Account toAccount);
     
     /**
      * 머니박스 삭제 시 관련된 모든 자동이체 스케줄 삭제
@@ -58,4 +49,11 @@ public interface AutoTransferScheduleService {
      * - 머니박스가 toAccount인 모든 스케줄을 대상으로 함
      */
     void deleteAllSchedulesForMoneyBox(Account moneyBoxAccount);
+    
+    /**
+     * 자동이체 현재/다음달 상태 조회 (MoneyBoxInfoResponse, MoneyBoxUpdateResponse 공통 사용)
+     * - 현재 유효한 스케줄과 미래 스케줄을 조회하여 통합된 상태 정보 반환
+     * - validTo 검증을 통해 다음달 실제 적용 여부 계산
+     */
+    TransferStatus getTransferStatus(Account fromAccount, Account toAccount);
 }

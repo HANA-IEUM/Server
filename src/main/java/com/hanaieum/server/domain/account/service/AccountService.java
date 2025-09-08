@@ -7,6 +7,8 @@ import com.hanaieum.server.domain.member.entity.Member;
 import com.hanaieum.server.domain.bucketList.entity.BucketList;
 
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.Optional;
 
 public interface AccountService {
 
@@ -27,15 +29,18 @@ public interface AccountService {
     // === 계좌 조회 메서드 ===
     MainAccountResponse getMainAccount(Member member);
     Long getMainAccountIdByMemberId(Long memberId);
-    Account findMainAccountByMember(Member member); // 추가: Member 객체로 주계좌 조회
+    Account findMainAccountByMember(Member member);
     Account findById(Long accountId);
     Account findByIdWithLock(Long accountId);
+    
+    // === 도메인별 계좌 조회 메서드 ===
+    Optional<Account> findMainAccount(Member member);
+    List<Account> findMoneyBoxes(Member member);
 
     // === 계좌 도메인 검증 메서드 ===
     void validateAccountOwnership(Long accountId, Long memberId);
     void validateAccountPassword(Long accountId, String password);
-    void validateSufficientBalance(Long accountId, BigDecimal amount);
-    
+
     // === 계좌 잔액 조작 메서드 ===
     void debitBalance(Long accountId, BigDecimal amount);
     void creditBalance(Long accountId, BigDecimal amount);
