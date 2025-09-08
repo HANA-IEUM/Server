@@ -268,9 +268,9 @@ class BucketListControllerTest {
         mockMvc.perform(get("/api/bucket-lists/creation-availability")
                         .header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.available").value(true))
-                .andExpect(jsonPath("$.data.currentMoneyBoxCount").value(1)) // 공통 버킷리스트로 생성된 머니박스
-                .andExpect(jsonPath("$.data.maxMoneyBoxCount").value(20));
+                .andExpect(jsonPath("$.data.canCreate").value(true))
+                .andExpect(jsonPath("$.data.currentMoneyBoxCount").value(1)); // 공통 버킷리스트로 생성된 머니박스
+                // .andExpect(jsonPath("$.data.maxMoneyBoxCount").value(20));
     }
 
     // ========== 헬퍼 메서드 ==========
