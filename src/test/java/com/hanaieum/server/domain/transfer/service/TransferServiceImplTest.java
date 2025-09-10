@@ -68,8 +68,8 @@ class TransferServiceImplTest {
         verify(accountService).getMainAccountIdByMemberId(memberId);
         verify(accountService).validateAccountOwnership(moneyBoxAccountId, memberId);
         verify(accountService).validateAccountPassword(mainAccountId, password);
-        verify(accountService).debitBalance(mainAccountId, amount);
-        verify(accountService).creditBalance(moneyBoxAccountId, amount);
+        verify(accountService).debitBalance(mainAccount, amount);
+        verify(accountService).creditBalance(moneyBoxAccount, amount);
         verify(transactionService).recordTransfer(
                 eq(mainAccount), eq(moneyBoxAccount), eq(amount),
                 eq(ReferenceType.MONEY_BOX_DEPOSIT), eq("머니박스 충전"), isNull()
@@ -110,10 +110,10 @@ class TransferServiceImplTest {
 
         Member sponsor = createMember(sponsorMemberId, "010-1111-1111", "후원자");
         Member bucketOwner = createMember(2L, "010-2222-2222", "버킷소유자");
-        
+
         Account sponsorMainAccount = createMainAccount(sponsorMainAccountId, sponsor, new BigDecimal("200000"));
         Account moneyBoxAccount = createMoneyBoxAccount(moneyBoxAccountId, bucketOwner, new BigDecimal("50000"));
-        
+
         BucketList bucketList = createBucketList(bucketId, bucketOwner, moneyBoxAccount);
 
         when(accountService.getMainAccountIdByMemberId(sponsorMemberId)).thenReturn(sponsorMainAccountId);
@@ -128,8 +128,8 @@ class TransferServiceImplTest {
         verify(accountService).getMainAccountIdByMemberId(sponsorMemberId);
         verify(bucketListRepository).findByIdAndDeletedFalse(bucketId);
         verify(accountService).validateAccountPassword(sponsorMainAccountId, password);
-        verify(accountService).debitBalance(sponsorMainAccountId, amount);
-        verify(accountService).creditBalance(moneyBoxAccountId, amount);
+        verify(accountService).debitBalance(sponsorMainAccount, amount);
+        verify(accountService).creditBalance(moneyBoxAccount, amount);
         verify(transactionService).recordTransfer(
                 eq(sponsorMainAccount), eq(moneyBoxAccount), eq(amount),
                 eq(ReferenceType.BUCKET_FUNDING), eq("후원"), eq(bucketId)
@@ -184,8 +184,8 @@ class TransferServiceImplTest {
         // Then
         verify(accountService).findByIdWithLock(fromAccountId);
         verify(accountService).findByIdWithLock(toAccountId);
-        verify(accountService).debitBalance(fromAccountId, amount);
-        verify(accountService).creditBalance(toAccountId, amount);
+        verify(accountService).debitBalance(fromAccount, amount);
+        verify(accountService).creditBalance(toAccount, amount);
         verify(transactionService).recordTransfer(
                 eq(fromAccount), eq(toAccount), eq(amount),
                 eq(ReferenceType.AUTO_TRANSFER), eq("자동이체"), eq(scheduleId)
@@ -222,8 +222,8 @@ class TransferServiceImplTest {
         verify(accountService).getMainAccountIdByMemberId(memberId);
         verify(accountService, times(2)).findByIdWithLock(moneyBoxAccountId);
         verify(accountService).findByIdWithLock(mainAccountId);
-        verify(accountService).debitBalance(moneyBoxAccountId, moneyBoxBalance);
-        verify(accountService).creditBalance(mainAccountId, moneyBoxBalance);
+        verify(accountService).debitBalance(moneyBoxAccount, moneyBoxBalance);
+        verify(accountService).creditBalance(mainAccount, moneyBoxBalance);
         verify(transactionService).recordTransfer(
                 eq(moneyBoxAccount), eq(mainAccount), eq(moneyBoxBalance),
                 eq(ReferenceType.MONEY_BOX_WITHDRAW), eq("머니박스 원금 인출"), eq(referenceId)
@@ -280,7 +280,7 @@ class TransferServiceImplTest {
         // Then
         verify(accountService).getMainAccountIdByMemberId(memberId);
         verify(accountService).findByIdWithLock(mainAccountId);
-        verify(accountService).creditBalance(mainAccountId, interestAmount);
+        verify(accountService).creditBalance(mainAccount, interestAmount);
         verify(transactionService).recordDeposit(
                 eq(mainAccount), eq(interestAmount), isNull(), eq("하나이음"),
                 eq(ReferenceType.MONEY_BOX_INTEREST), eq("머니박스 이자"), eq(bucketListId)

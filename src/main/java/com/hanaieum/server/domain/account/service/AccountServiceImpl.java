@@ -254,25 +254,23 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     @Transactional
-    public void debitBalance(Long accountId, BigDecimal amount) {
-        Account account = findByIdWithLock(accountId);
+    public void debitBalance(Account account, BigDecimal amount) {
         BigDecimal newBalance = account.getBalance().subtract(amount);
         if (newBalance.compareTo(BigDecimal.ZERO) < 0) {
             throw new CustomException(ErrorCode.INSUFFICIENT_BALANCE);
         }
         account.updateBalance(newBalance);
         accountRepository.save(account);
-        log.info("출금 처리 완료 - 계좌 ID: {}, 출금액: {}, 잔액: {}", accountId, amount, newBalance);
+        log.info("출금 처리 완료 - 계좌 ID: {}, 출금액: {}, 잔액: {}", account.getId(), amount, newBalance);
     }
 
     @Override
     @Transactional
-    public void creditBalance(Long accountId, BigDecimal amount) {
-        Account account = findByIdWithLock(accountId);
+    public void creditBalance(Account account, BigDecimal amount) {
         BigDecimal newBalance = account.getBalance().add(amount);
         account.updateBalance(newBalance);
         accountRepository.save(account);
-        log.info("입금 처리 완료 - 계좌 ID: {}, 입금액: {}, 잔액: {}", accountId, amount, newBalance);
+        log.info("입금 처리 완료 - 계좌 ID: {}, 입금액: {}, 잔액: {}", account.getId(), amount, newBalance);
     }
     
     @Override

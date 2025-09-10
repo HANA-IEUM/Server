@@ -42,8 +42,8 @@ public interface AccountService {
     void validateAccountPassword(Long accountId, String password);
 
     // === 계좌 잔액 조작 메서드 ===
-    void debitBalance(Long accountId, BigDecimal amount);
-    void creditBalance(Long accountId, BigDecimal amount);
+    void debitBalance(Account account, BigDecimal amount);
+    void creditBalance(Account account, BigDecimal amount);
     
     // === 머니박스 개수 조회 메서드 ===
     long getMoneyBoxCountByMember(Member member);

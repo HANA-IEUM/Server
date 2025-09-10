@@ -111,20 +111,14 @@ public class TransferServiceImpl implements TransferService {
         Account toAccount = accountService.findByIdWithLock(toAccountId);
         
         // 2. 출금 (잔액 검증도 처리)
-        accountService.debitBalance(fromAccount.getId(), amount);
+        accountService.debitBalance(fromAccount, amount);
         
         // 3. 입금
-        accountService.creditBalance(toAccount.getId(), amount);
+        accountService.creditBalance(toAccount, amount);
         
         // 4. 거래내역 2건 생성
-        transactionService.recordTransfer(
-            fromAccount,
-            toAccount,
-            amount,
-            referenceType,
-            referenceType.getDescription(),
-            referenceId
-        );
+        transactionService.recordTransfer(fromAccount, toAccount, amount,
+                referenceType, referenceType.getDescription(), referenceId);
     }
 
     @Override
@@ -136,7 +130,7 @@ public class TransferServiceImpl implements TransferService {
         Account mainAccount = accountService.findByIdWithLock(mainAccountId);
 
         // 2. 실제 주계좌 잔액에 이자 추가
-        accountService.creditBalance(mainAccount.getId(), interestAmount);
+        accountService.creditBalance(mainAccount, interestAmount);
 
         // 3. 이자 거래 기록 생성 (상대방: 하나이음)
         transactionService.recordDeposit(

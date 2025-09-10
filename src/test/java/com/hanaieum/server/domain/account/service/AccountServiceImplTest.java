@@ -294,21 +294,18 @@ class AccountServiceImplTest {
     @DisplayName("출금 처리 성공")
     void debitBalance_Success() {
         // Given
-        Long accountId = 1L;
         BigDecimal amount = new BigDecimal("3000");
         Member member = createTestMember();
         Account account = Account.builder()
-                .id(accountId)
+                .id(1L)
                 .member(member)
                 .balance(new BigDecimal("10000"))
                 .build();
-        
-        when(accountRepository.findByIdAndDeletedFalseWithLock(accountId))
-                .thenReturn(Optional.of(account));
+
         when(accountRepository.save(account)).thenReturn(account);
 
         // When
-        accountService.debitBalance(accountId, amount);
+        accountService.debitBalance(account, amount);
 
         // Then
         assertThat(account.getBalance()).isEqualTo(new BigDecimal("7000"));
@@ -319,23 +316,19 @@ class AccountServiceImplTest {
     @DisplayName("출금 처리 실패 - 잔액 부족")
     void debitBalance_InsufficientBalance() {
         // Given
-        Long accountId = 1L;
         BigDecimal amount = new BigDecimal("15000");
         Member member = createTestMember();
         Account account = Account.builder()
-                .id(accountId)
+                .id(1L)
                 .member(member)
                 .balance(new BigDecimal("10000"))
                 .build();
-        
-        when(accountRepository.findByIdAndDeletedFalseWithLock(accountId))
-                .thenReturn(Optional.of(account));
 
         // When & Then
-        assertThatThrownBy(() -> accountService.debitBalance(accountId, amount))
+        assertThatThrownBy(() -> accountService.debitBalance(account, amount))
                 .isInstanceOf(CustomException.class)
                 .hasMessageContaining(ErrorCode.INSUFFICIENT_BALANCE.getMessage());
-        
+
         verify(accountRepository, never()).save(account);
     }
 
@@ -343,21 +336,18 @@ class AccountServiceImplTest {
     @DisplayName("입금 처리 성공")
     void creditBalance_Success() {
         // Given
-        Long accountId = 1L;
         BigDecimal amount = new BigDecimal("5000");
         Member member = createTestMember();
         Account account = Account.builder()
-                .id(accountId)
+                .id(1L)
                 .member(member)
                 .balance(new BigDecimal("10000"))
                 .build();
-        
-        when(accountRepository.findByIdAndDeletedFalseWithLock(accountId))
-                .thenReturn(Optional.of(account));
+
         when(accountRepository.save(account)).thenReturn(account);
 
         // When
-        accountService.creditBalance(accountId, amount);
+        accountService.creditBalance(account, amount);
 
         // Then
         assertThat(account.getBalance()).isEqualTo(new BigDecimal("15000"));
