@@ -1,6 +1,5 @@
 package com.hanaieum.server.domain.transfer.service;
 
-import com.hanaieum.server.domain.transaction.entity.ReferenceType;
 import java.math.BigDecimal;
 
 public interface TransferService {
