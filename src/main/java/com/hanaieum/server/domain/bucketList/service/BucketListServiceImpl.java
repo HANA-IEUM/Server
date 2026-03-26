@@ -1,5 +1,6 @@
 package com.hanaieum.server.domain.bucketList.service;
 
+import com.hanaieum.server.common.config.TransactionRunner;
 import com.hanaieum.server.common.exception.CustomException;
 import com.hanaieum.server.domain.account.entity.Account;
 import com.hanaieum.server.domain.account.service.AccountService;
@@ -55,6 +56,7 @@ public class BucketListServiceImpl implements BucketListService {
     private final CouponService couponService;
 
     private final InterestCalculator interestCalculator;
+    private final TransactionRunner transactionRunner;
 
     /**
      * 현재 로그인한 사용자 정보를 가져오는 공통 메서드
@@ -138,7 +140,8 @@ public class BucketListServiceImpl implements BucketListService {
         // 공유 버킷리스트인 경우 선택된 멤버들을 참여자로 추가
         if (requestDto.getTogetherFlag() && requestDto.getSelectedMemberIds() != null && !requestDto.getSelectedMemberIds().isEmpty()) {
             try {
-                updateBucketListParticipants(savedBucketList, requestDto.getSelectedMemberIds());
+                // TransactionRunner를 사용하여 독립적인 트랜잭션으로 실행 (실패해도 메인 트랜잭션 롤백 안 됨)
+                transactionRunner.runInNewTransaction(() -> updateBucketListParticipants(savedBucketList, requestDto.getSelectedMemberIds()));
                 log.info("공유 버킷리스트 참여자 추가 완료: bucketListId = {}, 참여자 수 = {}",
                         savedBucketList.getId(), requestDto.getSelectedMemberIds().size());
             } catch (Exception e) {
@@ -151,31 +154,34 @@ public class BucketListServiceImpl implements BucketListService {
         // 머니박스 자동 생성
         if (requestDto.getCreateMoneyBox() != null && requestDto.getCreateMoneyBox()) {
             try {
-                // 자동이체 정보가 있는 경우 자동이체 포함하여 생성
-                if (Boolean.TRUE.equals(requestDto.getEnableAutoTransfer()) &&
-                        requestDto.getMonthlyAmount() != null &&
-                        requestDto.getTransferDay() != null) {
+                // TransactionRunner를 사용하여 독립적인 트랜잭션으로 실행 (실패해도 메인 트랜잭션 롤백 안 됨)
+                transactionRunner.runInNewTransaction(() -> {
+                    // 자동이체 정보가 있는 경우 자동이체 포함하여 생성
+                    if (Boolean.TRUE.equals(requestDto.getEnableAutoTransfer()) &&
+                            requestDto.getMonthlyAmount() != null &&
+                            requestDto.getTransferDay() != null) {
 
-                    Integer transferDay = parseInt(requestDto.getTransferDay());
-                    accountService.createMoneyBoxForBucketList(
-                            savedBucketList,
-                            member,
-                            requestDto.getMoneyBoxName(),
-                            requestDto.getEnableAutoTransfer(),
-                            requestDto.getMonthlyAmount(),
-                            transferDay
-                    );
-                    log.info("버킷리스트와 연동된 머니박스 및 자동이체 생성 완료: bucketListId = {}, monthlyAmount = {}, transferDay = {}일",
-                            savedBucketList.getId(), requestDto.getMonthlyAmount(), transferDay);
-                } else {
-                    // 자동이체 없이 머니박스만 생성
-                    accountService.createMoneyBoxForBucketList(
-                            savedBucketList,
-                            member,
-                            requestDto.getMoneyBoxName()
-                    );
-                    log.info("버킷리스트와 연동된 머니박스 생성 완료: bucketListId = {}", savedBucketList.getId());
-                }
+                        Integer transferDay = Integer.parseInt(requestDto.getTransferDay());
+                        accountService.createMoneyBoxForBucketList(
+                                savedBucketList,
+                                member,
+                                requestDto.getMoneyBoxName(),
+                                requestDto.getEnableAutoTransfer(),
+                                requestDto.getMonthlyAmount(),
+                                transferDay
+                        );
+                        log.info("버킷리스트와 연동된 머니박스 및 자동이체 생성 완료: bucketListId = {}, monthlyAmount = {}, transferDay = {}일",
+                                savedBucketList.getId(), requestDto.getMonthlyAmount(), transferDay);
+                    } else {
+                        // 자동이체 없이 머니박스만 생성
+                        accountService.createMoneyBoxForBucketList(
+                                savedBucketList,
+                                member,
+                                requestDto.getMoneyBoxName()
+                        );
+                        log.info("버킷리스트와 연동된 머니박스 생성 완료: bucketListId = {}", savedBucketList.getId());
+                    }
+                });
             } catch (Exception e) {
                 log.warn("머니박스 자동 생성 실패 (버킷리스트 생성은 완료됨): bucketListId = {}, error = {}",
                         savedBucketList.getId(), e.getMessage());
@@ -422,17 +428,17 @@ public class BucketListServiceImpl implements BucketListService {
             // 같이 진행으로 변경된 경우, 선택된 멤버들과 공유
             if (requestDto.getShareFlag() && !previousShareFlag) {
                 if (requestDto.getSelectedMemberIds() != null && !requestDto.getSelectedMemberIds().isEmpty()) {
-                    updateBucketListParticipants(bucketList, requestDto.getSelectedMemberIds());
+                    transactionRunner.runInNewTransaction(() -> updateBucketListParticipants(bucketList, requestDto.getSelectedMemberIds()));
                 }
             }
             // 혼자 진행으로 변경된 경우, 기존 참여자들 비활성화
             else if (!requestDto.getShareFlag() && previousShareFlag) {
-                deactivateAllParticipants(bucketList);
+                transactionRunner.runInNewTransaction(() -> deactivateAllParticipants(bucketList));
             }
             // 이미 같이 진행 중이고 멤버 목록이 변경된 경우
             else if (requestDto.getShareFlag() && previousShareFlag) {
                 if (requestDto.getSelectedMemberIds() != null) {
-                    updateBucketListParticipants(bucketList, requestDto.getSelectedMemberIds());
+                    transactionRunner.runInNewTransaction(() -> updateBucketListParticipants(bucketList, requestDto.getSelectedMemberIds()));
                 }
             }
         }
@@ -447,8 +453,7 @@ public class BucketListServiceImpl implements BucketListService {
     /**
      * 버킷리스트 참여자 업데이트
      */
-    @Transactional
-    protected void updateBucketListParticipants(BucketList bucketList, List<Long> selectedMemberIds) {
+    private void updateBucketListParticipants(BucketList bucketList, List<Long> selectedMemberIds) {
         log.info("버킷리스트 참여자 업데이트 - 버킷리스트 ID: {}, 선택된 멤버 수: {}",
                 bucketList.getId(), selectedMemberIds.size());
 
@@ -510,8 +515,7 @@ public class BucketListServiceImpl implements BucketListService {
     /**
      * 모든 참여자 비활성화 (혼자 진행으로 변경 시)
      */
-    @Transactional
-    protected void deactivateAllParticipants(BucketList bucketList) {
+    private void deactivateAllParticipants(BucketList bucketList) {
         log.info("모든 참여자 비활성화 - 버킷리스트 ID: {}", bucketList.getId());
 
         List<BucketParticipant> participants = bucketParticipantRepository.findByBucketListAndActive(bucketList, true);
@@ -661,7 +665,8 @@ public class BucketListServiceImpl implements BucketListService {
 
         // 6. 쿠폰 발행
         try {
-            couponService.createMemberCoupon(bucketListId);
+            // TransactionRunner를 사용하여 독립적인 트랜잭션으로 실행 (실패해도 메인 트랜잭션 롤백 안 됨)
+            transactionRunner.runInNewTransaction(() -> couponService.createMemberCoupon(bucketListId));
             log.info("버킷리스트 달성 쿠폰 발행 완료: bucketListId = {}", bucketListId);
         } catch (Exception e) {
             log.warn("쿠폰 발행 실패 (버킷리스트 달성은 완료됨): bucketListId = {}, error = {}", bucketListId, e.getMessage());

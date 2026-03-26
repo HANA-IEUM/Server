@@ -1,5 +1,6 @@
 package com.hanaieum.server.domain.autoTransfer.service;
 
+import com.hanaieum.server.common.config.TransactionRunner;
 import com.hanaieum.server.domain.autoTransfer.entity.AutoTransferHistory;
 import com.hanaieum.server.domain.autoTransfer.entity.AutoTransferSchedule;
 import com.hanaieum.server.domain.autoTransfer.entity.AutoTransferStatus;
@@ -25,6 +26,7 @@ public class AutoTransferServiceImpl implements AutoTransferService {
     private final AutoTransferScheduleRepository scheduleRepository;
     private final AutoTransferHistoryRepository historyRepository;
     private final TransferService transferService;
+    private final TransactionRunner transactionRunner;
     
     @Override
     public void executeScheduledTransfers(LocalDate targetDate) {
@@ -44,7 +46,9 @@ public class AutoTransferServiceImpl implements AutoTransferService {
                     continue;
                 }
                 
-                AutoTransferHistory history = executeTransfer(schedule);
+                // TransactionRunner를 사용하여 개별 이체를 독립적인 트랜잭션으로 실행
+                AutoTransferHistory history = transactionRunner.runInNewTransaction(() -> doExecuteTransfer(schedule));
+                
                 if (history.getStatus() == AutoTransferStatus.SUCCESS) {
                     successCount++;
                 } else {
@@ -64,6 +68,10 @@ public class AutoTransferServiceImpl implements AutoTransferService {
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public AutoTransferHistory executeTransfer(AutoTransferSchedule schedule) {
+        return doExecuteTransfer(schedule);
+    }
+
+    private AutoTransferHistory doExecuteTransfer(AutoTransferSchedule schedule) {
         log.info("자동이체 실행: scheduleId={}, fromAccountId={}, toAccountId={}, amount={}", 
                 schedule.getId(), schedule.getFromAccount().getId(), 
                 schedule.getToAccount().getId(), schedule.getAmount());
@@ -127,7 +135,8 @@ public class AutoTransferServiceImpl implements AutoTransferService {
         
         for (AutoTransferHistory history : failedTransfers) {
             try {
-                retryOneHistory(history);
+                // TransactionRunner를 사용하여 개별 재시도를 독립적인 트랜잭션으로 실행
+                transactionRunner.runInNewTransaction(() -> doRetryOneHistory(history));
                 successCount++;
             } catch (Exception e) {
                 failedCount++;
@@ -146,10 +155,14 @@ public class AutoTransferServiceImpl implements AutoTransferService {
     }
     
     /**
-     * 개별 재시도 처리 (독립 트랜잭션)
+     * 개별 재시도 처리 (독립 트랜잭션 보장을 위해 TransactionRunner에서 호출)
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    protected void retryOneHistory(AutoTransferHistory history) {
+    public void retryOneHistory(AutoTransferHistory history) {
+        doRetryOneHistory(history);
+    }
+
+    private void doRetryOneHistory(AutoTransferHistory history) {
         log.debug("자동이체 재시도 - History ID: {}, Schedule ID: {}, Retry Count: {}", 
                  history.getId(), history.getSchedule().getId(), history.getRetryCount());
         
