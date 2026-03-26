@@ -25,7 +25,7 @@ public class InterestCalculator {
         for (Transaction tx : transactions) {
 
             // 목표금액이 다 채워졌으면 중단
-            if (depositSum.compareTo(targetAmount) >= 0) break ;
+            if (depositSum.compareTo(targetAmount) >= 0) break;
 
             // 각 트랜잭션의 입금액(목표금액 한도)
             BigDecimal depositAmount = tx.getAmount();

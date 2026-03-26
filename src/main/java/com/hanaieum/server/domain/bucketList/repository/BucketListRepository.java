@@ -2,7 +2,6 @@ package com.hanaieum.server.domain.bucketList.repository;
 
 import com.hanaieum.server.domain.bucketList.entity.BucketList;
 import com.hanaieum.server.domain.bucketList.entity.BucketListStatus;
-import com.hanaieum.server.domain.group.entity.Group;
 import com.hanaieum.server.domain.member.entity.Member;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -31,8 +30,8 @@ public interface BucketListRepository extends JpaRepository<BucketList, Long> {
 
     // 특정 멤버가 참여자인 버킷리스트 조회
     @Query("SELECT DISTINCT bl FROM BucketList bl JOIN bl.participants p " +
-           "WHERE p.member.id = :memberId AND p.active = true AND bl.deleted = false " +
-           "ORDER BY bl.createdAt DESC")
+            "WHERE p.member.id = :memberId AND p.active = true AND bl.deleted = false " +
+            "ORDER BY bl.createdAt DESC")
     List<BucketList> findByParticipantMemberId(@Param("memberId") Long memberId);
 
     // Transfer Service용 - ID로 삭제되지 않은 버킷리스트 조회

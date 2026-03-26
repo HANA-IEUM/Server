@@ -2,22 +2,31 @@ package com.hanaieum.server.domain.coupon.repository;
 
 import com.hanaieum.server.domain.bucketList.entity.BucketListType;
 import com.hanaieum.server.domain.coupon.entity.Coupon;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import static org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace.NONE;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.test.context.ActiveProfiles;
+
 import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = NONE)
 @DisplayName("CouponRepository 테스트")
+@ActiveProfiles("test")
 class CouponRepositoryTest {
 
     @Autowired
     private CouponRepository couponRepository;
+
+    @BeforeEach
+    void setUp() {
+        couponRepository.deleteAll();
+    }
 
     @Test
     @DisplayName("카테고리별 쿠폰을 조회한다.")

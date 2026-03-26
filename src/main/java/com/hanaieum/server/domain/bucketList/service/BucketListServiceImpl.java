@@ -1,7 +1,6 @@
 package com.hanaieum.server.domain.bucketList.service;
 
 import com.hanaieum.server.common.exception.CustomException;
-import com.hanaieum.server.common.exception.ErrorCode;
 import com.hanaieum.server.domain.account.entity.Account;
 import com.hanaieum.server.domain.account.service.AccountService;
 import com.hanaieum.server.domain.autoTransfer.service.AutoTransferScheduleService;

@@ -5,11 +5,13 @@ import com.hanaieum.server.domain.account.entity.AccountType;
 import com.hanaieum.server.domain.member.entity.Gender;
 import com.hanaieum.server.domain.member.entity.Member;
 import com.hanaieum.server.domain.member.repository.MemberRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -22,6 +24,7 @@ import static org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTest
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = NONE)
 @DisplayName("AccountRepository 테스트")
+@ActiveProfiles("test")
 class AccountRepositoryTest {
 
     @Autowired
@@ -35,7 +38,7 @@ class AccountRepositoryTest {
     void existsByNumber() {
         // Given
         Member member = createAndSaveMember();
-        Account account = createAndSaveAccount(member, "12345678901234", AccountType.MAIN);
+        createAndSaveAccount(member, "12345678901234", AccountType.MAIN);
 
         // When
         boolean exists = accountRepository.existsByNumber("12345678901234");
@@ -209,7 +212,7 @@ class AccountRepositoryTest {
         Account moneyBox2 = createAndSaveMoneyBox(member, "22222222222", "쇼핑 머니박스");
         Account moneyBox3 = createAndSaveMoneyBox(member, "33333333333", "생활비 머니박스");
         
-        // Then - 머니박스는 여러개 조회됨
+        // Then - 머니박스는 여러개 조회
         List<Account> moneyBoxes = accountRepository
                 .findAllByMemberAndAccountTypeAndDeletedFalse(member, AccountType.MONEY_BOX);
         

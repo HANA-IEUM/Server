@@ -18,6 +18,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
+import static com.hanaieum.server.domain.transaction.entity.TransactionType.*;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -35,7 +37,7 @@ public class TransactionServiceImpl implements TransactionService {
         // 출금 레코드 생성
         Transaction withdrawTx = Transaction.builder()
                 .account(fromAccount)
-                .transactionType(TransactionType.WITHDRAW)
+                .transactionType(WITHDRAW)
                 .amount(amount)
                 .balanceAfter(fromAccount.getBalance()) // debit 이후 값
                 .counterpartyAccountId(toAccount.getId())
@@ -50,7 +52,7 @@ public class TransactionServiceImpl implements TransactionService {
         // 입금 레코드 생성
         Transaction depositTx = Transaction.builder()
                 .account(toAccount)
-                .transactionType(TransactionType.DEPOSIT)
+                .transactionType(DEPOSIT)
                 .amount(amount)
                 .balanceAfter(toAccount.getBalance()) // credit 이후 값
                 .counterpartyAccountId(fromAccount.getId())
@@ -74,7 +76,7 @@ public class TransactionServiceImpl implements TransactionService {
         // 입금 레코드 생성
         Transaction depositTx = Transaction.builder()
                 .account(toAccount)
-                .transactionType(TransactionType.DEPOSIT)
+                .transactionType(DEPOSIT)
                 .amount(amount)
                 .balanceAfter(toAccount.getBalance()) // credit 이후 값
                 .counterpartyAccountId(counterpartyAccountId)
