@@ -1,5 +1,6 @@
 package com.hanaieum.server.domain.bucketList.service;
 
+import com.hanaieum.server.common.config.TransactionRunner;
 import com.hanaieum.server.domain.account.service.AccountService;
 import com.hanaieum.server.domain.autoTransfer.service.AutoTransferScheduleService;
 import com.hanaieum.server.domain.bucketList.calculator.InterestCalculator;
@@ -67,6 +68,19 @@ class BucketListServiceTest {
 
     @Mock
     private InterestCalculator interestCalculator;
+    @Mock
+    private TransactionRunner transactionRunner;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        // TransactionRunner.runInNewTransaction 호출 시 람다를 즉시 실행하도록 설정
+        lenient().when(transactionRunner.runInNewTransaction(any(java.util.function.Supplier.class)))
+                .thenAnswer(invocation -> ((java.util.function.Supplier<?>) invocation.getArgument(0)).get());
+        lenient().doAnswer(invocation -> {
+            ((Runnable) invocation.getArgument(0)).run();
+            return null;
+        }).when(transactionRunner).runInNewTransaction(any(Runnable.class));
+    }
 
     /**
      * 시나리오 1: 그룹원의 완료된 버킷리스트 접근 권한 테스트
@@ -380,7 +394,8 @@ class BucketListServiceTest {
                 transactionService,
                 autoTransferScheduleService,
                 couponService,
-                interestCalculator
+                interestCalculator,
+                transactionRunner
         );
     }
 

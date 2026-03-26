@@ -1,5 +1,6 @@
 package com.hanaieum.server.domain.autoTransfer.service;
 
+import com.hanaieum.server.common.config.TransactionRunner;
 import com.hanaieum.server.domain.account.entity.Account;
 import com.hanaieum.server.domain.account.entity.AccountType;
 import com.hanaieum.server.domain.autoTransfer.entity.AutoTransferHistory;
@@ -10,6 +11,7 @@ import com.hanaieum.server.domain.autoTransfer.repository.AutoTransferScheduleRe
 import com.hanaieum.server.domain.member.entity.Gender;
 import com.hanaieum.server.domain.member.entity.Member;
 import com.hanaieum.server.domain.transfer.service.TransferService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,8 +42,21 @@ class AutoTransferServiceImplTest {
     @Mock
     private TransferService transferService;
 
+    @Mock
+    private TransactionRunner transactionRunner;
+
     @InjectMocks
     private AutoTransferServiceImpl autoTransferService;
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(transactionRunner.runInNewTransaction(any(java.util.function.Supplier.class)))
+                .thenAnswer(invocation -> ((java.util.function.Supplier<?>) invocation.getArgument(0)).get());
+        lenient().doAnswer(invocation -> {
+            ((Runnable) invocation.getArgument(0)).run();
+            return null;
+        }).when(transactionRunner).runInNewTransaction(any(Runnable.class));
+    }
 
     @Test
     @DisplayName("예정된 자동이체 실행 성공")
