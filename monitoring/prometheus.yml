@@ -1,0 +1,8 @@
+global:
+  scrape_interval: 15s # 메트릭 수집 주기
+
+scrape_configs:
+  - job_name: 'hana-ieum-server'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['host.docker.internal:8080'] # 로컬 실행 시 호스트 IP 접근용

@@ -11,9 +11,22 @@ spring:
     url: ${DB_URL}
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
+    hikari:
+      register-mbeans: true # JMX를 통한 모니터링 허용
+      pool-name: HanaIeumPool
+      # [면접 방어용 설정]
+      # Pool Size = Tn * (Cm - 1) + 1 공식 적용
+      # Tn: 동시 처리 스레드 수 (k6 부하 테스트 기준 100)
+      # Cm: 한 스레드당 필요한 최대 커넥션 수 (REQUIRES_NEW 사용으로 인해 2)
+      # 계산: 100 * (2 - 1) + 1 = 101
+      maximum-pool-size: 101
+      minimum-idle: 10
+      connection-timeout: 30000 # 30초
+      idle-timeout: 600000      # 10분
+      max-lifetime: 1800000      # 30분
   jpa:
     hibernate:
-      ddl-auto: update # create-drop, update
+      ddl-auto: create # create-drop, update
     properties:
       hibernate:
         show_sql: true
@@ -49,3 +62,21 @@ aws:
   secret-key: ${AWS_SECRET_ACCESS_KEY}
   region: ap-northeast-2
   bucket: hana-ieum
+
+# 모니터링 설정
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "prometheus,health,info,metrics" # 노출할 엔드포인트
+  endpoint:
+    prometheus:
+      enabled: true
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true # HTTP 요청 응답 시간 히스토그램 활성화

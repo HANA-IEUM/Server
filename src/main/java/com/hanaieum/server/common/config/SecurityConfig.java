@@ -46,7 +46,8 @@ public class SecurityConfig {
                                 "/api/auth/verify",      // 인증번호 확인
                                 "/api/verification/**",  // 문자인증 (하위 경로 포함)
                                 "/swagger-ui/**",        // Swagger UI
-                                "/v3/api-docs/**"        // OpenAPI 문서
+                                "/v3/api-docs/**",       // OpenAPI 문서
+                                "/actuator/**"           // 모니터링 메트릭
                         ).permitAll()                      // 인증 없이 접근 가능한 URL
                         .anyRequest().authenticated()      // 그 외 모든 요청은 인증 필요
                 )

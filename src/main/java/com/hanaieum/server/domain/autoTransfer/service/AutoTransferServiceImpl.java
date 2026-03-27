@@ -7,6 +7,8 @@ import com.hanaieum.server.domain.autoTransfer.entity.AutoTransferStatus;
 import com.hanaieum.server.domain.autoTransfer.repository.AutoTransferHistoryRepository;
 import com.hanaieum.server.domain.autoTransfer.repository.AutoTransferScheduleRepository;
 import com.hanaieum.server.domain.transfer.service.TransferService;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,7 +21,6 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class AutoTransferServiceImpl implements AutoTransferService {
     
@@ -27,6 +28,30 @@ public class AutoTransferServiceImpl implements AutoTransferService {
     private final AutoTransferHistoryRepository historyRepository;
     private final TransferService transferService;
     private final TransactionRunner transactionRunner;
+
+    // Metrics
+    private final Counter autoTransferSuccessCounter;
+    private final Counter autoTransferFailureCounter;
+
+    public AutoTransferServiceImpl(
+            AutoTransferScheduleRepository scheduleRepository,
+            AutoTransferHistoryRepository historyRepository,
+            TransferService transferService,
+            TransactionRunner transactionRunner,
+            MeterRegistry meterRegistry) {
+        this.scheduleRepository = scheduleRepository;
+        this.historyRepository = historyRepository;
+        this.transferService = transferService;
+        this.transactionRunner = transactionRunner;
+
+        // Initialize Counters
+        this.autoTransferSuccessCounter = Counter.builder("hana.ieum.autotransfer.success")
+                .description("Total number of successful auto transfers")
+                .register(meterRegistry);
+        this.autoTransferFailureCounter = Counter.builder("hana.ieum.autotransfer.failure")
+                .description("Total number of failed auto transfers")
+                .register(meterRegistry);
+    }
     
     @Override
     public void executeScheduledTransfers(LocalDate targetDate) {
@@ -46,7 +71,13 @@ public class AutoTransferServiceImpl implements AutoTransferService {
                     continue;
                 }
                 
-                // TransactionRunner를 사용하여 개별 이체를 독립적인 트랜잭션으로 실행
+                /**
+                 * [면접 포인트] REQUIRES_NEW 사용에 따른 Deadlock 방어 전략
+                 * - 개별 이체의 원자성을 위해 독립 트랜잭션(REQUIRES_NEW)을 사용함.
+                 * - 이 경우 한 스레드가 2개의 커넥션을 점유할 수 있어 커넥션 풀 고갈 시 데드락 발생 위험이 있음.
+                 * - 이를 방어하기 위해 application.yml에 HikariCP Pool Size 공식을 적용함 (Pool Size = Tn * (Cm - 1) + 1).
+                 * - 또한, executeScheduledTransfers 메서드 자체에서 @Transactional을 제거하여 상위 커넥션 점유를 최소화함.
+                 */
                 AutoTransferHistory history = transactionRunner.runInNewTransaction(() -> doExecuteTransfer(schedule));
                 
                 if (history.getStatus() == AutoTransferStatus.SUCCESS) {
@@ -96,6 +127,9 @@ public class AutoTransferServiceImpl implements AutoTransferService {
             
             AutoTransferHistory savedHistory = historyRepository.save(history);
             log.info("자동이체 성공: historyId={}", savedHistory.getId());
+
+            // Increment Metric
+            autoTransferSuccessCounter.increment();
             
             return savedHistory;
             
@@ -113,6 +147,9 @@ public class AutoTransferServiceImpl implements AutoTransferService {
                     .failureReason(e.getMessage())
                     .retryCount(0)
                     .build();
+            
+            // Increment Metric
+            autoTransferFailureCounter.increment();
             
             return historyRepository.save(history);
         }

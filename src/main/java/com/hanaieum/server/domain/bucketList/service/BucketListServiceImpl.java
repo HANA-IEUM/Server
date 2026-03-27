@@ -21,6 +21,8 @@ import com.hanaieum.server.domain.transaction.entity.TransactionType;
 import com.hanaieum.server.domain.transaction.service.TransactionService;
 import com.hanaieum.server.domain.transfer.service.TransferService;
 import com.hanaieum.server.security.CustomUserDetails;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
@@ -41,7 +43,6 @@ import static org.springframework.security.core.context.SecurityContextHolder.ge
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class BucketListServiceImpl implements BucketListService {
 
@@ -57,6 +58,46 @@ public class BucketListServiceImpl implements BucketListService {
 
     private final InterestCalculator interestCalculator;
     private final TransactionRunner transactionRunner;
+
+    // Metrics
+    private final Counter bucketListCreatedCounter;
+    private final Counter bucketListCompletedCounter;
+    private final Counter bucketListDeletedCounter;
+
+    public BucketListServiceImpl(
+            BucketListRepository bucketListRepository,
+            BucketParticipantRepository bucketParticipantRepository,
+            MemberRepository memberRepository,
+            AccountService accountService,
+            TransferService transferService,
+            TransactionService transactionService,
+            AutoTransferScheduleService autoTransferScheduleService,
+            CouponService couponService,
+            InterestCalculator interestCalculator,
+            TransactionRunner transactionRunner,
+            MeterRegistry meterRegistry) {
+        this.bucketListRepository = bucketListRepository;
+        this.bucketParticipantRepository = bucketParticipantRepository;
+        this.memberRepository = memberRepository;
+        this.accountService = accountService;
+        this.transferService = transferService;
+        this.transactionService = transactionService;
+        this.autoTransferScheduleService = autoTransferScheduleService;
+        this.couponService = couponService;
+        this.interestCalculator = interestCalculator;
+        this.transactionRunner = transactionRunner;
+
+        // Initialize Counters
+        this.bucketListCreatedCounter = Counter.builder("hana.ieum.bucketlist.created")
+                .description("Total number of bucket lists created")
+                .register(meterRegistry);
+        this.bucketListCompletedCounter = Counter.builder("hana.ieum.bucketlist.completed")
+                .description("Total number of bucket lists completed")
+                .register(meterRegistry);
+        this.bucketListDeletedCounter = Counter.builder("hana.ieum.bucketlist.deleted")
+                .description("Total number of bucket lists deleted")
+                .register(meterRegistry);
+    }
 
     /**
      * 현재 로그인한 사용자 정보를 가져오는 공통 메서드
@@ -136,6 +177,9 @@ public class BucketListServiceImpl implements BucketListService {
         // 저장
         BucketList savedBucketList = bucketListRepository.save(bucketList);
         log.info("버킷리스트 생성 완료: ID = {}", savedBucketList.getId());
+
+        // Increment Metric
+        bucketListCreatedCounter.increment();
 
         // 공유 버킷리스트인 경우 선택된 멤버들을 참여자로 추가
         if (requestDto.getTogetherFlag() && requestDto.getSelectedMemberIds() != null && !requestDto.getSelectedMemberIds().isEmpty()) {
@@ -538,10 +582,11 @@ public class BucketListServiceImpl implements BucketListService {
         // 진행중인 버킷리스트
         if (bucketList.getStatus() == IN_PROGRESS) {
             Account moneyBoxAccount = bucketList.getMoneyBoxAccount();
-            log.info("연결된 머니박스: {}", moneyBoxAccount.getId());
+            
+            // 머니박스가 존재하는 경우에만 처리
+            if (moneyBoxAccount != null) {
+                log.info("연결된 머니박스: {}", moneyBoxAccount.getId());
 
-            // 진행중인 버킷리스트인 경우 머니박스의 잔액을 주계좌로 반환
-            if (bucketList.getStatus() == IN_PROGRESS) {
                 // 머니박스 → 주계좌 전액 인출
                 BigDecimal withdrawnAmount = transferService.withdrawAllFromMoneyBox(
                         member.getId(),
@@ -551,21 +596,26 @@ public class BucketListServiceImpl implements BucketListService {
 
                 log.info("버킷리스트 삭제로 인한 머니박스 잔액 인출 완료: {} → 주계좌, 인출금액: {}",
                         moneyBoxAccount.getId(), withdrawnAmount);
+
+                // 머니박스 계좌 삭제
+                moneyBoxAccount.setDeleted(true);
+                accountService.save(moneyBoxAccount);
+                log.info("머니박스 계좌 삭제 완료: {}", moneyBoxAccount.getId());
+
+                // 관련 자동이체 스케줄 모두 삭제 및 비활성화
+                autoTransferScheduleService.deleteAllSchedulesForMoneyBox(moneyBoxAccount);
+                log.info("자동이체 스케줄 삭제 완료");
+            } else {
+                log.warn("삭제하려는 버킷리스트에 연결된 머니박스가 없습니다: ID = {}", bucketListId);
             }
-
-            // 머니박스 계좌 삭제
-            moneyBoxAccount.setDeleted(true);
-            accountService.save(moneyBoxAccount);
-            log.info("머니박스 계좌 삭제 완료: {}", moneyBoxAccount.getId());
-
-            // 관련 자동이체 스케줄 모두 삭제 및 비활성화
-            autoTransferScheduleService.deleteAllSchedulesForMoneyBox(moneyBoxAccount);
-            log.info("자동이체 스케줄 삭제 완료");
         }
 
         // 버킷리스트 삭제
         bucketList.setDeleted(true);
         bucketListRepository.save(bucketList);
+
+        // Increment Metric
+        bucketListDeletedCounter.increment();
 
         log.info("버킷리스트 삭제 완료: ID = {}", bucketListId);
     }
@@ -662,6 +712,9 @@ public class BucketListServiceImpl implements BucketListService {
         BucketListStatus previousStatus = bucketList.getStatus();
         bucketList.setStatus(COMPLETED);
         BucketList savedBucketList = bucketListRepository.save(bucketList);
+
+        // Increment Metric
+        bucketListCompletedCounter.increment();
 
         // 6. 쿠폰 발행
         try {
